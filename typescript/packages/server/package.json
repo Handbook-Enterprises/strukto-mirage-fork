@@ -54,7 +54,7 @@
   },
   "dependencies": {
     "@fastify/multipart": "^10.0.0",
-    "@struktoai/mirage-core": "workspace:*",
+    "@viewengine/mirage-core": "workspace:*",
     "@struktoai/mirage-node": "workspace:*",
     "fastify": "^5.8.5",
     "isomorphic-git": "^1.38.1",

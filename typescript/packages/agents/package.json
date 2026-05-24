@@ -68,7 +68,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@struktoai/mirage-core": "workspace:*",
+    "@viewengine/mirage-core": "workspace:*",
     "picomatch": "^4.0.4"
   },
   "peerDependencies": {

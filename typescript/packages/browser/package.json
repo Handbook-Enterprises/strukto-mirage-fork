@@ -49,7 +49,7 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.0",
-    "@struktoai/mirage-core": "workspace:*"
+    "@viewengine/mirage-core": "workspace:*"
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
