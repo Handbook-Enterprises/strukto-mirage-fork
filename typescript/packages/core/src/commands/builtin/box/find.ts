@@ -31,7 +31,6 @@ function fnmatch(name: string, pattern: string): boolean {
   return new RegExp(`^${re}$`).test(name)
 }
 
-
 // Compose a child entry into a full mount-prefixed path. <BACKEND>Readdir
 // returns bare child names; the find walk needs absolute paths so output
 // entries are pipeable into `ls`/`cat` and recursion's readdir hits the
