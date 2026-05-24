@@ -13,7 +13,7 @@
     "@struktoai/mirage-agents": "workspace:*",
     "@struktoai/mirage-browser": "workspace:*",
     "@struktoai/mirage-cli": "workspace:*",
-    "@struktoai/mirage-core": "workspace:*",
+    "@viewengine/mirage-core": "workspace:*",
     "@struktoai/mirage-node": "workspace:*",
     "ai": "^6.0.170",
     "deepagents": "^1.9.0",

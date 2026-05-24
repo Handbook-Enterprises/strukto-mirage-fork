@@ -23,15 +23,15 @@ importers:
       '@struktoai/mirage-browser':
         specifier: workspace:*
         version: link:packages/browser
-      '@struktoai/mirage-core':
-        specifier: workspace:*
-        version: link:packages/core
       '@struktoai/mirage-node':
         specifier: workspace:*
         version: link:packages/node
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.17
+      '@viewengine/mirage-core':
+        specifier: workspace:*
+        version: link:packages/core
       aws-sdk-client-mock:
         specifier: ^4.1.0
         version: 4.1.0
@@ -92,12 +92,12 @@ importers:
       '@struktoai/mirage-cli':
         specifier: workspace:*
         version: link:../../typescript/packages/cli
-      '@struktoai/mirage-core':
-        specifier: workspace:*
-        version: link:../../typescript/packages/core
       '@struktoai/mirage-node':
         specifier: workspace:*
         version: link:../../typescript/packages/node
+      '@viewengine/mirage-core':
+        specifier: workspace:*
+        version: link:../../typescript/packages/core
       ai:
         specifier: ^6.0.170
         version: 6.0.170(zod@4.3.6)
@@ -181,7 +181,7 @@ importers:
 
   packages/agents:
     dependencies:
-      '@struktoai/mirage-core':
+      '@viewengine/mirage-core':
         specifier: workspace:*
         version: link:../core
       picomatch:
@@ -230,7 +230,7 @@ importers:
       '@neondatabase/serverless':
         specifier: ^1.0.0
         version: 1.1.0
-      '@struktoai/mirage-core':
+      '@viewengine/mirage-core':
         specifier: workspace:*
         version: link:../core
     devDependencies:
@@ -332,7 +332,7 @@ importers:
 
   packages/node:
     dependencies:
-      '@struktoai/mirage-core':
+      '@viewengine/mirage-core':
         specifier: workspace:*
         version: link:../core
       '@zkochan/fuse-native':
@@ -408,12 +408,12 @@ importers:
       '@fastify/multipart':
         specifier: ^10.0.0
         version: 10.0.0
-      '@struktoai/mirage-core':
-        specifier: workspace:*
-        version: link:../core
       '@struktoai/mirage-node':
         specifier: workspace:*
         version: link:../node
+      '@viewengine/mirage-core':
+        specifier: workspace:*
+        version: link:../core
       fastify:
         specifier: ^5.8.5
         version: 5.8.5
