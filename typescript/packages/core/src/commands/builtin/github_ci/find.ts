@@ -32,13 +32,6 @@ function fnmatch(name: string, pattern: string): boolean {
   return new RegExp(`^${re}$`).test(name)
 }
 
-
-function joinFindPath(parent: string, child: string): string {
-  const base = parent.replace(/\/+$/, "")
-  const c = child.replace(/^\/+/, "")
-  return base === "" || base === "/" ? "/" + c : base + "/" + c
-}
-
 async function walk(
   accessor: GitHubCIAccessor,
   path: PathSpec,
@@ -55,13 +48,12 @@ async function walk(
   }
   const results: string[] = []
   for (const child of children) {
-    const childPath = joinFindPath(path.original, child)
-    results.push(childPath)
+    results.push(child)
     const isTerminal = TERMINAL_EXTS.some((ext) => child.endsWith(ext))
     if (!isTerminal) {
       const childSpec = new PathSpec({
-        original: childPath,
-        directory: childPath,
+        original: child,
+        directory: child,
         resolved: false,
         prefix: path.prefix,
       })

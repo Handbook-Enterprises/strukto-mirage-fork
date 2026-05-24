@@ -31,13 +31,6 @@ function fnmatch(name: string, pattern: string): boolean {
   return new RegExp(`^${re}$`).test(name)
 }
 
-
-function joinFindPath(parent: string, child: string): string {
-  const base = parent.replace(/\/+$/, "")
-  const c = child.replace(/^\/+/, "")
-  return base === "" || base === "/" ? "/" + c : base + "/" + c
-}
-
 async function walk(
   accessor: GDriveAccessor,
   path: PathSpec,
@@ -56,12 +49,11 @@ async function walk(
   for (const child of children) {
     const isFolder = child.endsWith('/')
     const trimmed = isFolder ? child.replace(/\/+$/, '') : child
-    const childPath = joinFindPath(path.original, trimmed)
-    results.push(childPath)
+    results.push(trimmed)
     if (isFolder) {
       const childSpec = new PathSpec({
-        original: childPath,
-        directory: childPath,
+        original: trimmed,
+        directory: trimmed,
         resolved: false,
         prefix: path.prefix,
       })
