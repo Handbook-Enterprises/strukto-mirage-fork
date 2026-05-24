@@ -31,6 +31,15 @@ function fnmatch(name: string, pattern: string): boolean {
   return new RegExp(`^${re}$`).test(name)
 }
 
+// Compose a child entry into a full mount-prefixed path. <BACKEND>Readdir
+// returns bare child names; the find walk needs absolute paths so output
+// entries are pipeable into `ls`/`cat` and recursion's readdir hits the
+// right key.
+function joinChild(parent: PathSpec, child: string): string {
+  const base = parent.original.replace(/\/+$/, '')
+  return base === '' || base === '/' ? '/' + child : base + '/' + child
+}
+
 async function walk(
   accessor: BoxAccessor,
   path: PathSpec,
@@ -49,11 +58,12 @@ async function walk(
   for (const child of children) {
     const isFolder = child.endsWith('/')
     const trimmed = isFolder ? child.replace(/\/+$/, '') : child
-    results.push(trimmed)
+    const childFullPath = joinChild(path, trimmed)
+    results.push(childFullPath)
     if (isFolder) {
       const childSpec = new PathSpec({
-        original: trimmed,
-        directory: trimmed,
+        original: childFullPath,
+        directory: childFullPath,
         resolved: false,
         prefix: path.prefix,
       })
