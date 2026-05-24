@@ -41,6 +41,15 @@ async function lsEntries(
     const s = await githubStat(accessor, path, indexCache ?? undefined)
     return [s]
   }
+  // Real coreutils `ls FILE` echoes the file; without this, githubReaddir
+  // throws for non-directory paths and ls errors "not a directory" or ENOENT.
+  // Stat-first matches the standard ls behavior of echoing the file's metadata.
+  try {
+    const s = await githubStat(accessor, path, indexCache ?? undefined)
+    if (s.type !== FileType.DIRECTORY) return [s]
+  } catch {
+    // fall through; readdir below produces the canonical not-found / access error
+  }
   let entries: string[]
   try {
     entries = await githubReaddir(accessor, path, indexCache ?? undefined)
