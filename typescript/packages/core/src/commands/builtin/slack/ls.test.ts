@@ -120,4 +120,56 @@ describe('slack ls', () => {
     )
     expect(out.stdout).toBe('alice__U1.json')
   })
+
+  // Regression: previously, `ls` on a non-directory leaf threw "not a
+  // directory" / ENOENT because lsEntries called slackReaddir unconditionally.
+  // After the stat-first fix it should echo the file like coreutils ls.
+  it('echoes a leaf file path instead of erroring (ls FILE compat)', async () => {
+    const idx = new RAMIndexCacheStore()
+    const transport = new FakeSlackTransport(() => {
+      throw new Error('should not be called')
+    })
+    await seedChannel(idx, '/mnt/slack', 'general__C1', 'C1', {
+      dates: ['2024-01-01'],
+    })
+    const out = await runLs(
+      [
+        new PathSpec({
+          original: '/mnt/slack/channels/general__C1/2024-01-01/chat.jsonl',
+          directory: '/mnt/slack/channels/general__C1/2024-01-01/chat.jsonl',
+          resolved: false,
+          prefix: '/mnt/slack',
+        }),
+      ],
+      {},
+      { index: idx, transport },
+    )
+    expect(out.exitCode).toBe(0)
+    expect(out.stderr).toBe('')
+    expect(out.stdout).toContain('chat.jsonl')
+  })
+
+  // Same regression check on a user file.
+  it('echoes a user leaf file instead of erroring', async () => {
+    const idx = new RAMIndexCacheStore()
+    const transport = new FakeSlackTransport(() => {
+      throw new Error('should not be called')
+    })
+    await seedUser(idx, '/mnt/slack', 'alice__U1.json', 'U1')
+    const out = await runLs(
+      [
+        new PathSpec({
+          original: '/mnt/slack/users/alice__U1.json',
+          directory: '/mnt/slack/users/alice__U1.json',
+          resolved: false,
+          prefix: '/mnt/slack',
+        }),
+      ],
+      {},
+      { index: idx, transport },
+    )
+    expect(out.exitCode).toBe(0)
+    expect(out.stderr).toBe('')
+    expect(out.stdout).toContain('alice__U1.json')
+  })
 })

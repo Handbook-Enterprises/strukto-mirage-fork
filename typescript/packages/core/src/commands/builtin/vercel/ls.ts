@@ -37,6 +37,15 @@ async function lsEntries(
   indexCache: CommandOpts['index'],
 ): Promise<FileStat[]> {
   if (listDir) return [await coreStat(accessor, path, indexCache ?? undefined)]
+  // Real coreutils `ls FILE` echoes the file; without this, coreReaddir
+  // throws for non-directory paths and ls errors "not a directory" or ENOENT.
+  // Stat-first matches the standard ls behavior of echoing the file's metadata.
+  try {
+    const s = await coreStat(accessor, path, indexCache ?? undefined)
+    if (s.type !== FileType.DIRECTORY) return [s]
+  } catch {
+    // fall through; readdir below produces the canonical not-found / access error
+  }
   let entries: string[]
   try {
     entries = await coreReaddir(accessor, path, indexCache ?? undefined)
