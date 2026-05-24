@@ -25,13 +25,23 @@ function asObject(value: unknown): Json {
   return value !== null && typeof value === 'object' && !Array.isArray(value) ? (value as Json) : {}
 }
 
+interface PaginateOptions {
+  /** Cap the number of pagination round-trips. `undefined` = unbounded
+   *  (legacy behavior). When the cap is hit, the function returns whatever
+   *  has been collected so far — the caller treats this as a best-effort
+   *  result. */
+  maxPages?: number
+}
+
 async function paginateTool(
   transport: NotionTransport,
   toolName: string,
   baseArgs: Record<string, unknown>,
+  options: PaginateOptions = {},
 ): Promise<Json[]> {
   const collected: Json[] = []
   let cursor: string | null = null
+  let pages = 0
   for (;;) {
     const args: Record<string, unknown> =
       cursor === null ? { ...baseArgs } : { ...baseArgs, start_cursor: cursor }
@@ -39,6 +49,10 @@ async function paginateTool(
     const results = asArray(response.results)
     for (const item of results) {
       collected.push(asObject(item))
+    }
+    pages += 1
+    if (options.maxPages !== undefined && pages >= options.maxPages) {
+      return collected
     }
     const hasMore = response.has_more === true
     const next = response.next_cursor
@@ -50,8 +64,20 @@ async function paginateTool(
 }
 
 export async function searchTopLevelPages(transport: NotionTransport): Promise<Json[]> {
+  // Cap pagination at 10 rounds (≈1000 pages searched) to avoid 30s+ MCP
+  // request timeouts on large workspaces. Notion's search API returns ALL
+  // pages and we then filter to `parent.type === 'workspace'`, so paginating
+  // fully through a workspace with thousands of pages takes many seconds
+  // and often exceeds the MCP timeout. Cached results survive in the
+  // workspace's IndexCacheStore so subsequent calls are fast even if the
+  // first one returned a best-effort subset.
+  //
+  // Best-effort limitation: top-level pages whose `last_edited_time` is
+  // older than the most recent 1000 pages in the workspace won't appear
+  // until pagination is improved (per-path use of blocks/children + DBs/query
+  // instead of workspace-wide search — see follow-up PR).
   const baseArgs = { filter: { value: 'page', property: 'object' }, page_size: 100 }
-  const all = await paginateTool(transport, 'API-post-search', baseArgs)
+  const all = await paginateTool(transport, 'API-post-search', baseArgs, { maxPages: 10 })
   const filtered: Json[] = []
   for (const page of all) {
     const parent = asObject(page.parent)
