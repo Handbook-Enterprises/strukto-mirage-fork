@@ -24,7 +24,7 @@ import {
   type CommandOpts,
   type FileStat,
   type PathSpec,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { stat as opfsStat } from '../../../../core/opfs/stat.ts'
 import type { OPFSAccessor } from '../../../../accessor/opfs.ts'
 

@@ -21,7 +21,7 @@ import {
   type CommandFnResult,
   type CommandOpts,
   type PathSpec,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { rmdir as redisRmdir } from '../../../core/redis/rmdir.ts'
 import { stat as redisStat } from '../../../core/redis/stat.ts'
 import { unlink as redisUnlink } from '../../../core/redis/unlink.ts'

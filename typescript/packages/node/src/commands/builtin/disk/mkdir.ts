@@ -20,7 +20,7 @@ import {
   type CommandFnResult,
   type CommandOpts,
   type PathSpec,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { mkdir as diskMkdir } from '../../../core/disk/mkdir.ts'
 import type { DiskAccessor } from '../../../accessor/disk.ts'
 

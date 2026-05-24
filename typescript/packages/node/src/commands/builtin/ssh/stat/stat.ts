@@ -24,7 +24,7 @@ import {
   type CommandOpts,
   type FileStat,
   type PathSpec,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { stat as sshStat } from '../../../../core/ssh/stat.ts'
 import type { SSHAccessor } from '../../../../accessor/ssh.ts'
 

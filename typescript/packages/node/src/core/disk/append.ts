@@ -15,7 +15,7 @@
 import type { DiskAccessor } from '../../accessor/disk.ts'
 import { appendFile, mkdir } from 'node:fs/promises'
 import path from 'node:path'
-import { type PathSpec, record, ResourceName } from '@struktoai/mirage-core'
+import { type PathSpec, record, ResourceName } from '@viewengine/mirage-core'
 import { resolveSafe } from './utils.ts'
 
 export async function appendBytes(

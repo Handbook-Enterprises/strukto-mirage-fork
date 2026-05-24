@@ -15,7 +15,7 @@
 import { mkdtempSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { PathSpec, ProvisionResult } from '@struktoai/mirage-core'
+import { PathSpec, ProvisionResult } from '@viewengine/mirage-core'
 import {
   fileReadProvision,
   headTailProvision,

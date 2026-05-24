@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { type CommandOpts, PathSpec, Precision, type Resource } from '@struktoai/mirage-core'
+import { type CommandOpts, PathSpec, Precision, type Resource } from '@viewengine/mirage-core'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { RedisAccessor } from '../../../accessor/redis.ts'
 import { writeBytes } from '../../../core/redis/write.ts'

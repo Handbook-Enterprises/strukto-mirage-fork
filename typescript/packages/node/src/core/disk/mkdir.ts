@@ -14,7 +14,7 @@
 
 import type { DiskAccessor } from '../../accessor/disk.ts'
 import { mkdir as fsMkdir } from 'node:fs/promises'
-import type { PathSpec } from '@struktoai/mirage-core'
+import type { PathSpec } from '@viewengine/mirage-core'
 import { resolveSafe } from './utils.ts'
 
 export async function mkdir(

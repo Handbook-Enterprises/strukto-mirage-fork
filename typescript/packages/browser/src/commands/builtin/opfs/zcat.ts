@@ -24,7 +24,7 @@ import {
   type CommandFnResult,
   type CommandOpts,
   type PathSpec,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { stream as opfsStream } from '../../../core/opfs/stream.ts'
 import type { OPFSAccessor } from '../../../accessor/opfs.ts'
 

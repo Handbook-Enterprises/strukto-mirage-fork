@@ -13,7 +13,7 @@
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
 import { describe, expect, it } from 'vitest'
-import { type FileStat, FileType } from '@struktoai/mirage-core'
+import { type FileStat, FileType } from '@viewengine/mirage-core'
 import { OPFSAccessor } from '../../accessor/opfs.ts'
 import { mkdir } from '../../core/opfs/mkdir.ts'
 import { writeBytes } from '../../core/opfs/write.ts'

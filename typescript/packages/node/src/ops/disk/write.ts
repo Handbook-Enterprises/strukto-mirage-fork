@@ -12,8 +12,8 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { extractWriteData, type PathSpec, type RegisteredOp } from '@struktoai/mirage-core'
-import { ResourceName } from '@struktoai/mirage-core'
+import { extractWriteData, type PathSpec, type RegisteredOp } from '@viewengine/mirage-core'
+import { ResourceName } from '@viewengine/mirage-core'
 import type { DiskAccessor } from '../../accessor/disk.ts'
 import { writeBytes } from '../../core/disk/write.ts'
 

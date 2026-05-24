@@ -22,7 +22,7 @@ import {
   type ByteSource,
   type CommandFnResult,
   type CommandOpts,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { readdir as diskReaddir } from '../../../core/disk/readdir.ts'
 import { stat as diskStat } from '../../../core/disk/stat.ts'
 import type { DiskAccessor } from '../../../accessor/disk.ts'

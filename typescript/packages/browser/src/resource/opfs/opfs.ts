@@ -20,7 +20,7 @@ import {
   type RegisteredOp,
   type Resource,
   ResourceName,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { OPFSAccessor } from '../../accessor/opfs.ts'
 import { OPFS_COMMANDS } from '../../commands/builtin/opfs/index.ts'
 import { appendBytes as appendCore } from '../../core/opfs/append.ts'

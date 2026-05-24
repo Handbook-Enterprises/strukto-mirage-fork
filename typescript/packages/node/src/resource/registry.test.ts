@@ -73,7 +73,7 @@ describe('node resource registry', () => {
 
   it('supports registering a custom factory', async () => {
     register('mock-fs', async () => {
-      const { RAMResource } = await import('@struktoai/mirage-core')
+      const { RAMResource } = await import('@viewengine/mirage-core')
       return new RAMResource()
     })
     expect(knownResources()).toContain('mock-fs')

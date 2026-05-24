@@ -29,7 +29,7 @@ import {
   type Resource,
   ResourceName,
   resolveLangfuseGlob,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { redactLangfuseConfig, type LangfuseConfig, type LangfuseConfigRedacted } from './config.ts'
 
 export interface LangfuseResourceState {

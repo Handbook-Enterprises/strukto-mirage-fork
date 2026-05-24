@@ -20,7 +20,7 @@ import {
   type RegisteredCommand,
   type RegisteredOp,
   type Resource,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { EmailAccessor } from '../../accessor/email.ts'
 import { EMAIL_COMMANDS } from '../../commands/builtin/email/index.ts'
 import { resolveGlob } from '../../core/email/glob.ts'

@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import type { RegisteredCommand } from '@struktoai/mirage-core'
+import type { RegisteredCommand } from '@viewengine/mirage-core'
 import { OPFS_AWK } from './awk.ts'
 import { RAM_BASE64 } from './base64_cmd.ts'
 import { OPFS_BASENAME } from './basename.ts'

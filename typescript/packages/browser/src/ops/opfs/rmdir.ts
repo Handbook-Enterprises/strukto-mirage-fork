@@ -12,8 +12,8 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import type { PathSpec, RegisteredOp } from '@struktoai/mirage-core'
-import { ResourceName } from '@struktoai/mirage-core'
+import type { PathSpec, RegisteredOp } from '@viewengine/mirage-core'
+import { ResourceName } from '@viewengine/mirage-core'
 import type { OPFSAccessor } from '../../accessor/opfs.ts'
 import { rmdir as coreRmdir } from '../../core/opfs/rmdir.ts'
 

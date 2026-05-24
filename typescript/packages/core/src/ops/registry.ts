@@ -52,7 +52,7 @@ export interface OpOptions {
   write?: boolean
 }
 
-const REGISTERED_OPS = Symbol.for('@struktoai/mirage-core.registeredOps')
+const REGISTERED_OPS = Symbol.for('@viewengine/mirage-core.registeredOps')
 
 interface OpCarrier {
   [REGISTERED_OPS]?: RegisteredOp[]

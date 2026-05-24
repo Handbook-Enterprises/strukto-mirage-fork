@@ -15,7 +15,7 @@
 import os from 'node:os'
 import path from 'node:path'
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
-import { MountMode, RAMResource, type Resource } from '@struktoai/mirage-core'
+import { MountMode, RAMResource, type Resource } from '@viewengine/mirage-core'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { Workspace } from '../../workspace.ts'
 import { DiskResource } from '../disk/disk.ts'
@@ -75,7 +75,7 @@ async function populate(
     mock.store.set(state.s3Bucket, name, content)
     return
   }
-  const { PathSpec } = await import('@struktoai/mirage-core')
+  const { PathSpec } = await import('@viewengine/mirage-core')
   const fullPath = `/${name}`
   const r = state.resource as RAMResource | DiskResource
   const parts = name.split('/').filter(Boolean)

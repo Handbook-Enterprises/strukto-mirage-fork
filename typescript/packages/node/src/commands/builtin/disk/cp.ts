@@ -20,7 +20,7 @@ import {
   specOf,
   type CommandFnResult,
   type CommandOpts,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { copy as diskCopy } from '../../../core/disk/copy.ts'
 import { find as diskFind } from '../../../core/disk/find.ts'
 import { stat as diskStat } from '../../../core/disk/stat.ts'

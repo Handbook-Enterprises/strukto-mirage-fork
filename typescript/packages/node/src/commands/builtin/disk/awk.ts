@@ -23,7 +23,7 @@ import {
   specOf,
   type CommandFnResult,
   type CommandOpts,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { stream as diskStream } from '../../../core/disk/stream.ts'
 import type { DiskAccessor } from '../../../accessor/disk.ts'
 

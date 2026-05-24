@@ -15,7 +15,7 @@
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { PathSpec } from '@struktoai/mirage-core'
+import { PathSpec } from '@viewengine/mirage-core'
 import { DiskAccessor } from './accessor/disk.ts'
 
 export function tmpRoot(label = 'mirage-disk-test-'): {

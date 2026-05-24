@@ -12,4 +12,4 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-export { HttpPostHogDriver, type HttpPostHogDriverOptions } from '@struktoai/mirage-core'
+export { HttpPostHogDriver, type HttpPostHogDriverOptions } from '@viewengine/mirage-core'

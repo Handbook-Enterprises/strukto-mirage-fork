@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import type { RegisteredCommand } from '@struktoai/mirage-core'
+import type { RegisteredCommand } from '@viewengine/mirage-core'
 import { EMAIL_BASENAME } from './basename.ts'
 import { EMAIL_CAT } from './cat.ts'
 import { EMAIL_DIRNAME } from './dirname.ts'

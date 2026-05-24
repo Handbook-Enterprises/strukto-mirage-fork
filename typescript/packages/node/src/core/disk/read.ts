@@ -14,7 +14,7 @@
 
 import type { DiskAccessor } from '../../accessor/disk.ts'
 import { readFile } from 'node:fs/promises'
-import { type PathSpec, record, ResourceName } from '@struktoai/mirage-core'
+import { type PathSpec, record, ResourceName } from '@viewengine/mirage-core'
 import { resolveSafe } from './utils.ts'
 
 export async function read(accessor: DiskAccessor, path: PathSpec): Promise<Uint8Array> {

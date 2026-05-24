@@ -15,9 +15,9 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { type ExecuteResult, MountMode, type ProvisionResult } from '@struktoai/mirage-core'
+import { type ExecuteResult, MountMode, type ProvisionResult } from '@viewengine/mirage-core'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { RAMResource } from '@struktoai/mirage-core'
+import { RAMResource } from '@viewengine/mirage-core'
 import { Workspace } from './workspace.ts'
 
 function asExec(r: ExecuteResult | ProvisionResult): ExecuteResult {

@@ -37,7 +37,7 @@ import {
   githubResolveGlob,
   githubStat,
   type GitHubTreeEntry,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { redactGitHubConfig, type GitHubConfig, type GitHubConfigRedacted } from './config.ts'
 
 export interface GitHubResourceState {

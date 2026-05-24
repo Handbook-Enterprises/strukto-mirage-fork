@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import type { RAMAccessor, PathSpec } from '@struktoai/mirage-core'
+import type { RAMAccessor, PathSpec } from '@viewengine/mirage-core'
 
 function norm(p: string): string {
   return `/${p.replace(/^\/+|\/+$/g, '')}`

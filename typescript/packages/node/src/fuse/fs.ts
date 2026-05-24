@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { FileType, type OpRecord, type Workspace } from '@struktoai/mirage-core'
+import { FileType, type OpRecord, type Workspace } from '@viewengine/mirage-core'
 import { isMacosMetadata } from './platform/macos.ts'
 
 const ENV_AGENT_ID = 'MIRAGE_AGENT_ID'

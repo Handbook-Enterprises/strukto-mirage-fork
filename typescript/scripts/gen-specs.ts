@@ -17,10 +17,10 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import * as Browser from '@struktoai/mirage-browser'
-import * as Core from '@struktoai/mirage-core'
+import * as Core from '@viewengine/mirage-core'
 import * as Node from '@struktoai/mirage-node'
 
-import type { CommandSpec, Operand, Option, RegisteredCommand } from '@struktoai/mirage-core'
+import type { CommandSpec, Operand, Option, RegisteredCommand } from '@viewengine/mirage-core'
 
 const __dirname = resolve(fileURLToPath(import.meta.url), '..')
 const SPEC_ROOT = resolve(__dirname, '..', '..', 'spec', 'typescript')

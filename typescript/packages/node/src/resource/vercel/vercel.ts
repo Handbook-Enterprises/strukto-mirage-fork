@@ -33,7 +33,7 @@ import {
   vercelRead,
   vercelReaddir,
   vercelStat,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 
 export interface VercelResourceOptions {
   config?: VercelConfig

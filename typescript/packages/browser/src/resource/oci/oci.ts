@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { ResourceName, type RegisteredCommand, type RegisteredOp } from '@struktoai/mirage-core'
+import { ResourceName, type RegisteredCommand, type RegisteredOp } from '@viewengine/mirage-core'
 import { S3Resource } from '../s3/s3.ts'
 import { ociToS3Config, redactOciConfig, type OCIConfig, type OCIConfigRedacted } from './config.ts'
 import { OCI_BROWSER_PROMPT } from './prompt.ts'

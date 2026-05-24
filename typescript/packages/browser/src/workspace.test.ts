@@ -13,7 +13,7 @@
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { MountMode, RAMResource } from '@struktoai/mirage-core'
+import { MountMode, RAMResource } from '@viewengine/mirage-core'
 import { installFakeNavigator, makeMockRoot } from './test-utils.ts'
 import { Workspace } from './workspace.ts'
 
@@ -74,7 +74,7 @@ describe('@struktoai/mirage-browser Workspace', () => {
           const { Workspace: NodeWorkspace } = await import('./workspace.ts')
           // borrow the default factory: call execute() on a sibling Workspace
           // to fetch its parser indirectly. Instead, simpler: lazy-import core.
-          const { createShellParser } = await import('@struktoai/mirage-core')
+          const { createShellParser } = await import('@viewengine/mirage-core')
           const { ENGINE_WASM_BASE64, GRAMMAR_WASM_BASE64 } = await import('./generated/wasm.ts')
           void NodeWorkspace
           const decode = (b64: string): Uint8Array => {

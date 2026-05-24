@@ -22,7 +22,7 @@ import {
   specOf,
   type CommandFnResult,
   type CommandOpts,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { writeBytes as redisWrite } from '../../../core/redis/write.ts'
 import { stream as redisStream } from '../../../core/redis/stream.ts'
 import type { RedisAccessor } from '../../../accessor/redis.ts'

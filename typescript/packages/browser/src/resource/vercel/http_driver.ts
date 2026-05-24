@@ -12,4 +12,4 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-export { HttpVercelDriver, type HttpVercelDriverOptions } from '@struktoai/mirage-core'
+export { HttpVercelDriver, type HttpVercelDriverOptions } from '@viewengine/mirage-core'

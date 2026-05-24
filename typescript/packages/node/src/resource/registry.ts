@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { normalizeFields, type Resource } from '@struktoai/mirage-core'
+import { normalizeFields, type Resource } from '@viewengine/mirage-core'
 
 /**
  * Construct a resource by registry name. Mirrors Python's
@@ -31,7 +31,7 @@ export type ResourceFactory = (config: Record<string, unknown>) => Promise<Resou
 
 const REGISTRY: Record<string, ResourceFactory> = {
   ram: async (_config) => {
-    const { RAMResource } = await import('@struktoai/mirage-core')
+    const { RAMResource } = await import('@viewengine/mirage-core')
     return new RAMResource()
   },
   disk: async (config) => {
@@ -71,12 +71,12 @@ const REGISTRY: Record<string, ResourceFactory> = {
   },
   postgres: async (config) => {
     const { PostgresResource } = await import('./postgres/postgres.ts')
-    const { normalizePostgresConfig } = await import('@struktoai/mirage-core')
+    const { normalizePostgresConfig } = await import('@viewengine/mirage-core')
     return new PostgresResource(normalizePostgresConfig(config))
   },
   mongodb: async (config) => {
     const { MongoDBResource } = await import('./mongodb/mongodb.ts')
-    const { normalizeMongoDBConfig } = await import('@struktoai/mirage-core')
+    const { normalizeMongoDBConfig } = await import('@viewengine/mirage-core')
     return new MongoDBResource(normalizeMongoDBConfig(config))
   },
   slack: async (config) => {

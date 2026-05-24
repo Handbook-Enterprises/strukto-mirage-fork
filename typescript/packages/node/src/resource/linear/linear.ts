@@ -31,7 +31,7 @@ import {
   type Resource,
   ResourceName,
   resolveLinearGlob,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { redactLinearConfig, type LinearConfig, type LinearConfigRedacted } from './config.ts'
 
 export interface LinearResourceState {

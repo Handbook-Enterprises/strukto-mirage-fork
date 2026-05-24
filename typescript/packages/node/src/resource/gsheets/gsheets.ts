@@ -30,7 +30,7 @@ import {
   gsheetsReaddir,
   gsheetsResolveGlob,
   gsheetsStat,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { redactGSheetsConfig, type GSheetsConfig, type GSheetsConfigRedacted } from './config.ts'
 
 export interface GSheetsResourceState {

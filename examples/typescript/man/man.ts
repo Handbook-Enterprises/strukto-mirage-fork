@@ -19,7 +19,7 @@ import {
   SlackResource,
   Workspace,
 } from '@struktoai/mirage-node'
-import { RAMResource } from '@struktoai/mirage-core'
+import { RAMResource } from '@viewengine/mirage-core'
 
 async function main(): Promise<void> {
   const ws = new Workspace(

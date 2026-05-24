@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { PathSpec } from '@struktoai/mirage-core'
+import { PathSpec } from '@viewengine/mirage-core'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { S3Resource } from './s3.ts'
 import type { S3Config } from './config.ts'

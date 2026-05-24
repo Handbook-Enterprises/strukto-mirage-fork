@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { hdf5Cat, type PathSpec, type RegisteredOp, ResourceName } from '@struktoai/mirage-core'
+import { hdf5Cat, type PathSpec, type RegisteredOp, ResourceName } from '@viewengine/mirage-core'
 import type { DiskAccessor } from '../../accessor/disk.ts'
 import { read as coreRead } from '../../core/disk/read.ts'
 

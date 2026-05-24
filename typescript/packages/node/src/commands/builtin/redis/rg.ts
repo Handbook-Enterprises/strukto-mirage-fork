@@ -30,7 +30,7 @@ import {
   type CommandFnResult,
   type CommandOpts,
   type FileStat,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { readdir as redisReaddir } from '../../../core/redis/readdir.ts'
 import { stat as redisStat } from '../../../core/redis/stat.ts'
 import { stream as redisStream } from '../../../core/redis/stream.ts'

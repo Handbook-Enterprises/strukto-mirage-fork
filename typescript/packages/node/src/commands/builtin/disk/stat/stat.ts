@@ -24,7 +24,7 @@ import {
   type CommandOpts,
   type FileStat,
   type PathSpec,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { stat as diskStat } from '../../../../core/disk/stat.ts'
 import type { DiskAccessor } from '../../../../accessor/disk.ts'
 

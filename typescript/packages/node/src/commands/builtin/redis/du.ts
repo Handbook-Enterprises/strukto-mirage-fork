@@ -21,7 +21,7 @@ import {
   type ByteSource,
   type CommandFnResult,
   type CommandOpts,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { du as redisDu } from '../../../core/redis/du.ts'
 import type { RedisAccessor } from '../../../accessor/redis.ts'
 

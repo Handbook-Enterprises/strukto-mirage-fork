@@ -12,8 +12,8 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import type { IndexCacheStore, PathSpec } from '@struktoai/mirage-core'
-import { IndexEntry, PathSpec as PathSpecCtor } from '@struktoai/mirage-core'
+import type { IndexCacheStore, PathSpec } from '@viewengine/mirage-core'
+import { IndexEntry, PathSpec as PathSpecCtor } from '@viewengine/mirage-core'
 import type { EmailAccessor } from '../../accessor/email.ts'
 import { fetchHeaders, listMessageUids } from './_client.ts'
 import { listFolders } from './folders.ts'

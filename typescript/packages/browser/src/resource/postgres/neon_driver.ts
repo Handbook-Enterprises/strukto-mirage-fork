@@ -13,7 +13,7 @@
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
 import { neon, type NeonQueryFunction } from '@neondatabase/serverless'
-import type { PgDriver, PgQueryResult } from '@struktoai/mirage-core'
+import type { PgDriver, PgQueryResult } from '@viewengine/mirage-core'
 
 interface FullResultsRow<R> {
   rows: R[]

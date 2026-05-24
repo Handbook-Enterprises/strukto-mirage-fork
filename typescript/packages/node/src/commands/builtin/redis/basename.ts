@@ -22,7 +22,7 @@ import {
   type CommandFnResult,
   type CommandOpts,
   type PathSpec,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 
 function basenameCommand(
   _accessor: Accessor,

@@ -22,7 +22,7 @@ import {
   type CommandFnResult,
   type CommandOpts,
   type PathSpec,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 
 function normalize(p: string, cwd: string): string {
   const path = p.startsWith('/') ? p : `${cwd.replace(/\/+$/, '')}/${p}`

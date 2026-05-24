@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { Accessor, loadOptionalPeer } from '@struktoai/mirage-core'
+import { Accessor, loadOptionalPeer } from '@viewengine/mirage-core'
 import type { ImapFlow } from 'imapflow'
 import type { EmailConfig } from '../resource/email/config.ts'
 

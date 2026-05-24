@@ -30,7 +30,7 @@ import {
   type CommandFnResult,
   type CommandOpts,
   type FileStat,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { readdir as diskReaddir } from '../../../core/disk/readdir.ts'
 import { stat as diskStat } from '../../../core/disk/stat.ts'
 import { stream as diskStream } from '../../../core/disk/stream.ts'

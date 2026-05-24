@@ -21,7 +21,7 @@ import {
   type ByteSource,
   type CommandFnResult,
   type CommandOpts,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { writeBytes as redisWrite } from '../../../core/redis/write.ts'
 import { mkdir as redisMkdir } from '../../../core/redis/mkdir.ts'
 import type { RedisAccessor } from '../../../accessor/redis.ts'

@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { type PathSpec, recordStream, ResourceName } from '@struktoai/mirage-core'
+import { type PathSpec, recordStream, ResourceName } from '@viewengine/mirage-core'
 import { isNotFound, resolveFileHandle } from './utils.ts'
 
 export async function* stream(

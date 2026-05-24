@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { normalizeFields, type Resource } from '@struktoai/mirage-core'
+import { normalizeFields, type Resource } from '@viewengine/mirage-core'
 import type { OAuthClientProvider } from '@modelcontextprotocol/sdk/client/auth.js'
 
 /**
@@ -106,7 +106,7 @@ interface PostgresBrowserCtorConfig {
 
 const REGISTRY: Record<string, ResourceFactory> = {
   ram: async (_config) => {
-    const { RAMResource } = await import('@struktoai/mirage-core')
+    const { RAMResource } = await import('@viewengine/mirage-core')
     return new RAMResource()
   },
   opfs: async (config) => {
@@ -201,7 +201,7 @@ const REGISTRY: Record<string, ResourceFactory> = {
   },
   mongodb: async (config) => {
     const { MongoDBResource } = await import('./mongodb/mongodb.ts')
-    const { normalizeMongoDBConfig } = await import('@struktoai/mirage-core')
+    const { normalizeMongoDBConfig } = await import('@viewengine/mirage-core')
     return new MongoDBResource(normalizeMongoDBConfig(config))
   },
   notion: async (config) => {

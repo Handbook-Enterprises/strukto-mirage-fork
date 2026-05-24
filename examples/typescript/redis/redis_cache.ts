@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { defaultFingerprint } from '@struktoai/mirage-core'
+import { defaultFingerprint } from '@viewengine/mirage-core'
 import { RedisFileCacheStore } from '@struktoai/mirage-node'
 
 const REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379/0'

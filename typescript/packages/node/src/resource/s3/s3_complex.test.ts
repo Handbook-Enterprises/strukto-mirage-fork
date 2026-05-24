@@ -15,7 +15,7 @@
 import { openSync, closeSync, readSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { MountMode, RAMResource } from '@struktoai/mirage-core'
+import { MountMode, RAMResource } from '@viewengine/mirage-core'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { Workspace } from '../../workspace.ts'
 import { S3Resource } from './s3.ts'

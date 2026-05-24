@@ -24,7 +24,7 @@ import {
   type ByteSource,
   type CommandFnResult,
   type CommandOpts,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { unlink as opfsUnlink } from '../../../core/opfs/unlink.ts'
 import { writeBytes as opfsWrite } from '../../../core/opfs/write.ts'
 import { stream as opfsStream } from '../../../core/opfs/stream.ts'

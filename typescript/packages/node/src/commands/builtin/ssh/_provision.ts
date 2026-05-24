@@ -20,7 +20,7 @@ import {
   Precision,
   ProvisionResult,
   type Resource,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import type { SSHAccessor } from '../../../accessor/ssh.ts'
 import { stat as sshStat } from '../../../core/ssh/stat.ts'
 

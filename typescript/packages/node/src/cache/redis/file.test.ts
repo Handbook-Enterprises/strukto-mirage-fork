@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { defaultFingerprint } from '@struktoai/mirage-core'
+import { defaultFingerprint } from '@viewengine/mirage-core'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { RedisFileCacheStore } from './file.ts'
 

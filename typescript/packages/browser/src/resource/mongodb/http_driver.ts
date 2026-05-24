@@ -19,7 +19,7 @@ import type {
   MongoFindOptions,
   MongoIndexAccess,
   MongoIterOptions,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 
 export interface HttpMongoDriverOptions {
   endpoint: string

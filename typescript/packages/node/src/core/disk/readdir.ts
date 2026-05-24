@@ -19,7 +19,7 @@ import {
   type IndexCacheStore,
   type PathSpec,
   ResourceType,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { norm, resolveSafe } from './utils.ts'
 
 export async function readdir(

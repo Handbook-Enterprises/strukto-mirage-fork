@@ -20,7 +20,7 @@ import {
   type CommandFnResult,
   type CommandOpts,
   type PathSpec,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { mkdir as redisMkdir } from '../../../core/redis/mkdir.ts'
 import type { RedisAccessor } from '../../../accessor/redis.ts'
 

@@ -20,7 +20,7 @@ import {
   type MongoFindOptions,
   type MongoIndexAccess,
   type MongoIterOptions,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 
 interface MongoCollectionLike {
   find: (

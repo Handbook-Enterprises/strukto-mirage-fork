@@ -32,7 +32,7 @@ import {
   type Resource,
   ResourceName,
   resolveNotionGlob,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { redactNotionConfig, type NotionConfig, type NotionConfigRedacted } from './config.ts'
 
 export interface NotionResourceState {

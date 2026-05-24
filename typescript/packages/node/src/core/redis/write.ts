@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { record, ResourceName, type PathSpec } from '@struktoai/mirage-core'
+import { record, ResourceName, type PathSpec } from '@viewengine/mirage-core'
 import type { RedisAccessor } from '../../accessor/redis.ts'
 import { norm, nowIso, parent } from './utils.ts'
 

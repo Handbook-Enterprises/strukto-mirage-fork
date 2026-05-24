@@ -33,7 +33,7 @@ import {
   resolveMongoDBConfig,
   resolveMongoGlob,
   ResourceName,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { HttpMongoDriver } from './http_driver.ts'
 
 export interface MongoDBResourceOptions {

@@ -24,7 +24,7 @@ import {
   type ByteSource,
   type CommandFnResult,
   type CommandOpts,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { unlink as diskUnlink } from '../../../core/disk/unlink.ts'
 import { writeBytes as diskWrite } from '../../../core/disk/write.ts'
 import { stream as diskStream } from '../../../core/disk/stream.ts'

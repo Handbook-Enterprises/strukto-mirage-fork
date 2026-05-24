@@ -30,7 +30,7 @@ import {
   boxReaddir,
   boxResolveGlob,
   boxStat,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { redactBoxConfig, type BoxConfig, type BoxConfigRedacted } from './config.ts'
 
 export interface BoxResourceState {

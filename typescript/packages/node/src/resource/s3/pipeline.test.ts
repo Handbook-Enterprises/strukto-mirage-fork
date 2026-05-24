@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { DEFAULT_SESSION_ID, MountMode, PathSpec, RAMResource } from '@struktoai/mirage-core'
+import { DEFAULT_SESSION_ID, MountMode, PathSpec, RAMResource } from '@viewengine/mirage-core'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { Workspace } from '../../workspace.ts'
 

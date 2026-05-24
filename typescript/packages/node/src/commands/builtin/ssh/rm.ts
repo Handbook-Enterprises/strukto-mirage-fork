@@ -21,7 +21,7 @@ import {
   type CommandFnResult,
   type CommandOpts,
   type PathSpec,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { rmdir as sshRmdir } from '../../../core/ssh/rmdir.ts'
 import { stat as sshStat } from '../../../core/ssh/stat.ts'
 import { unlink as sshUnlink } from '../../../core/ssh/unlink.ts'

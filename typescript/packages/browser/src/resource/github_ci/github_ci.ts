@@ -30,7 +30,7 @@ import {
   githubCiReaddir,
   githubCiResolveGlob,
   githubCiStat,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { redactGitHubCIConfig, type GitHubCIConfig, type GitHubCIConfigRedacted } from './config.ts'
 
 export interface GitHubCIResourceState {

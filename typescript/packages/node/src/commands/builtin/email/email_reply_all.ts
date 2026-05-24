@@ -23,7 +23,7 @@ import {
   type CommandFnResult,
   type CommandOpts,
   type PathSpec,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import type { EmailAccessor } from '../../../accessor/email.ts'
 import { fetchMessage } from '../../../core/email/_client.ts'
 import { replyAllMessage } from '../../../core/email/send.ts'

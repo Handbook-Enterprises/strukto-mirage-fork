@@ -22,7 +22,7 @@ import {
   type ByteSource,
   type CommandFnResult,
   type CommandOpts,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { stat as redisStat } from '../../../../core/redis/stat.ts'
 import { readdir as redisReaddir } from '../../../../core/redis/readdir.ts'
 import type { RedisAccessor } from '../../../../accessor/redis.ts'

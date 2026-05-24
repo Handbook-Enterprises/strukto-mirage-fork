@@ -13,7 +13,7 @@
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
 import { describe, expect, it } from 'vitest'
-import { MountMode, RAMResource } from '@struktoai/mirage-core'
+import { MountMode, RAMResource } from '@viewengine/mirage-core'
 import { Workspace } from './workspace.ts'
 
 describe('@struktoai/mirage-node Workspace', () => {
@@ -42,7 +42,7 @@ describe('@struktoai/mirage-node Workspace', () => {
         mode: MountMode.WRITE,
         shellParserFactory: async () => {
           calls += 1
-          const { createShellParser } = await import('@struktoai/mirage-core')
+          const { createShellParser } = await import('@viewengine/mirage-core')
           const { readFileSync } = await import('node:fs')
           const { createRequire } = await import('node:module')
           const requireCjs = createRequire(import.meta.url)

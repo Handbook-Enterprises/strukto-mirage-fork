@@ -30,7 +30,7 @@ import {
   type ByteSource,
   type CommandFnResult,
   type CommandOpts,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { stream as sshStream } from '../../../../core/ssh/stream.ts'
 import { stat as sshStat } from '../../../../core/ssh/stat.ts'
 import { find as sshFind } from '../../../../core/ssh/find.ts'

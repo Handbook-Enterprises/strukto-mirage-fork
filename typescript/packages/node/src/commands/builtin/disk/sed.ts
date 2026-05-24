@@ -28,7 +28,7 @@ import {
   type CommandOpts,
   type PathSpec,
   type SedCommand,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { writeBytes as diskWrite } from '../../../core/disk/write.ts'
 import { stream as diskStream } from '../../../core/disk/stream.ts'
 import type { DiskAccessor } from '../../../accessor/disk.ts'

@@ -17,7 +17,7 @@ import {
   NOTION_COMMANDS,
   NOTION_VFS_OPS,
   ResourceName,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import type { OAuthClientMetadata } from '@modelcontextprotocol/sdk/shared/auth.js'
 import { describe, expect, it } from 'vitest'
 import { NotionResource } from './notion.ts'

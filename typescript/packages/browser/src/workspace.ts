@@ -18,7 +18,7 @@ import {
   type ShellParser,
   Workspace as CoreWorkspace,
   type WorkspaceOptions,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { ENGINE_WASM_BASE64, GRAMMAR_WASM_BASE64 } from './generated/wasm.ts'
 
 let cachedParser: Promise<ShellParser> | null = null

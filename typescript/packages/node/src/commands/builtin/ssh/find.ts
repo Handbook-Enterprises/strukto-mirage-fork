@@ -21,7 +21,7 @@ import {
   type ByteSource,
   type CommandFnResult,
   type CommandOpts,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { find as sshFind } from '../../../core/ssh/find.ts'
 import type { SSHAccessor } from '../../../accessor/ssh.ts'
 

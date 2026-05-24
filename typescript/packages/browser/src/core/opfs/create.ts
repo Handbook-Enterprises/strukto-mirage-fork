@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import type { PathSpec } from '@struktoai/mirage-core'
+import type { PathSpec } from '@viewengine/mirage-core'
 import { writeBytes } from './write.ts'
 
 export function create(root: FileSystemDirectoryHandle, path: PathSpec): Promise<void> {

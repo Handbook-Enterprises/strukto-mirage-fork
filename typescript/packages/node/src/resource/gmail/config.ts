@@ -18,4 +18,4 @@ export {
   redactGoogleConfig as redactGmailConfig,
   type GoogleConfig as GmailConfig,
   type GoogleConfigRedacted as GmailConfigRedacted,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'

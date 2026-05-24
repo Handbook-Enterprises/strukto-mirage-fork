@@ -21,7 +21,7 @@ import {
   type ByteSource,
   type CommandFnResult,
   type CommandOpts,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { writeBytes as opfsWrite } from '../../../core/opfs/write.ts'
 import { mkdir as opfsMkdir } from '../../../core/opfs/mkdir.ts'
 import type { OPFSAccessor } from '../../../accessor/opfs.ts'

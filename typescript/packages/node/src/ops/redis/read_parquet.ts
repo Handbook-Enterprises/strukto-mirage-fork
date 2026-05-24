@@ -18,7 +18,7 @@ import {
   type PathSpec,
   type RegisteredOp,
   ResourceName,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import type { RedisAccessor } from '../../accessor/redis.ts'
 import { read as coreRead } from '../../core/redis/read.ts'
 
