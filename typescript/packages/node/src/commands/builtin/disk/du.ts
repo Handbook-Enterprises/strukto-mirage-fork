@@ -21,7 +21,7 @@ import {
   type ByteSource,
   type CommandFnResult,
   type CommandOpts,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { du as diskDu, duAll as diskDuAll } from '../../../core/disk/du.ts'
 import type { DiskAccessor } from '../../../accessor/disk.ts'
 

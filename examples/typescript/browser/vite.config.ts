@@ -24,7 +24,7 @@ dotenv.config({ path: resolve(here, '../../../.env.development') })
 
 export default defineConfig({
   optimizeDeps: {
-    exclude: ['@struktoai/mirage-browser', '@struktoai/mirage-core'],
+    exclude: ['@struktoai/mirage-browser', '@viewengine/mirage-core'],
   },
   define: {
     __TRELLO_API_KEY__: JSON.stringify(process.env.TRELLO_API_KEY ?? ''),

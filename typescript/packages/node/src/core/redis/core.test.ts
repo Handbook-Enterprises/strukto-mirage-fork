@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { LookupStatus, PathSpec, RAMIndexCacheStore } from '@struktoai/mirage-core'
+import { LookupStatus, PathSpec, RAMIndexCacheStore } from '@viewengine/mirage-core'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { RedisAccessor } from '../../accessor/redis.ts'
 import { RedisStore } from '../../resource/redis/store.ts'

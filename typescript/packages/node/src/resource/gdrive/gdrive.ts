@@ -29,7 +29,7 @@ import {
   gdriveReaddir,
   gdriveResolveGlob,
   gdriveStat,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { redactGDriveConfig, type GDriveConfig, type GDriveConfigRedacted } from './config.ts'
 
 export interface GDriveResourceState {

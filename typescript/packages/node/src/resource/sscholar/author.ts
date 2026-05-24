@@ -33,7 +33,7 @@ import {
   sscholarAuthorRead,
   sscholarAuthorReaddir,
   sscholarAuthorStat,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 
 export interface SSCholarAuthorResourceOptions {
   config?: SSCholarConfig

@@ -32,7 +32,7 @@ import {
   trelloRead,
   trelloReaddir,
   trelloStat,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { redactTrelloConfig, type TrelloConfig, type TrelloConfigRedacted } from './config.ts'
 
 export interface TrelloResourceState {

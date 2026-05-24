@@ -16,7 +16,7 @@ import { execSync } from 'node:child_process'
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import type { Workspace } from '@struktoai/mirage-core'
+import type { Workspace } from '@viewengine/mirage-core'
 import { loadOptionalPeer } from '../optional_peer.ts'
 import { MirageFS } from './fs.ts'
 

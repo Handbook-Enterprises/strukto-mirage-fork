@@ -25,7 +25,7 @@ import {
   type ByteSource,
   type CommandFnResult,
   type CommandOpts,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { unlink as redisUnlink } from '../../../core/redis/unlink.ts'
 import { writeBytes as redisWrite } from '../../../core/redis/write.ts'
 import { stream as redisStream } from '../../../core/redis/stream.ts'

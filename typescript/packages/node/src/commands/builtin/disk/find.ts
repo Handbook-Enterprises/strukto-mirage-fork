@@ -21,7 +21,7 @@ import {
   type ByteSource,
   type CommandFnResult,
   type CommandOpts,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { find as diskFind } from '../../../core/disk/find.ts'
 import type { DiskAccessor } from '../../../accessor/disk.ts'
 

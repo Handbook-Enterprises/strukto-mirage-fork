@@ -14,7 +14,7 @@
 
 import type { DiskAccessor } from '../../accessor/disk.ts'
 import { unlink as fsUnlink } from 'node:fs/promises'
-import type { PathSpec } from '@struktoai/mirage-core'
+import type { PathSpec } from '@viewengine/mirage-core'
 import { resolveSafe } from './utils.ts'
 
 export async function unlink(accessor: DiskAccessor, path: PathSpec): Promise<void> {

@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import type { PathSpec } from '@struktoai/mirage-core'
+import type { PathSpec } from '@viewengine/mirage-core'
 import { isNotFound, iterEntries, norm, resolveDirHandle, resolveParentDirHandle } from './utils.ts'
 
 async function walkSizes(dir: FileSystemDirectoryHandle): Promise<number> {

@@ -17,7 +17,7 @@ import {
   defaultFingerprint,
   parseLimit,
   type PathSpec,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import type { RedisClientType } from 'redis'
 import { RedisResource, type RedisResourceOptions } from '../../resource/redis/redis.ts'
 

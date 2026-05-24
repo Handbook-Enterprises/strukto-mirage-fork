@@ -24,7 +24,7 @@ import {
   type CommandFnResult,
   type CommandOpts,
   type PathSpec,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { stat as opfsStat } from '../../../../core/opfs/stat.ts'
 import { read as opfsRead } from '../../../../core/opfs/read.ts'
 import type { OPFSAccessor } from '../../../../accessor/opfs.ts'

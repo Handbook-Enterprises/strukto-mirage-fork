@@ -19,4 +19,4 @@ export {
   type S3BrowserSignOptions,
   type S3Config,
   type S3ConfigRedacted,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'

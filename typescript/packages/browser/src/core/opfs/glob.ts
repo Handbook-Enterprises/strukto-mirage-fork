@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { PathSpec } from '@struktoai/mirage-core'
+import { PathSpec } from '@viewengine/mirage-core'
 import { SCOPE_ERROR } from './constants.ts'
 import { readdir } from './readdir.ts'
 

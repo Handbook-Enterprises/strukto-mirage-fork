@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { type IndexCacheStore, PathSpec } from '@struktoai/mirage-core'
+import { type IndexCacheStore, PathSpec } from '@viewengine/mirage-core'
 import type { RedisAccessor } from '../../accessor/redis.ts'
 import { SCOPE_ERROR } from './constants.ts'
 import { readdir } from './readdir.ts'

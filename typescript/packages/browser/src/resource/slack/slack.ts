@@ -31,7 +31,7 @@ import {
   slackRead,
   slackReaddir,
   slackStat,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { redactSlackConfig, type SlackConfig, type SlackConfigRedacted } from './config.ts'
 
 export interface SlackResourceState {

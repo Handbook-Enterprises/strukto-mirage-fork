@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import type { RegisteredCommand } from '@struktoai/mirage-core'
+import type { RegisteredCommand } from '@viewengine/mirage-core'
 import { RAM_LOCAL_AUDIO_CAT_MP3 } from './cat_mp3.ts'
 import { RAM_LOCAL_AUDIO_CAT_OGG } from './cat_ogg.ts'
 import { RAM_LOCAL_AUDIO_CAT_WAV } from './cat_wav.ts'

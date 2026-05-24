@@ -31,7 +31,7 @@ import {
   gslidesReaddir,
   gslidesResolveGlob,
   gslidesStat,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { redactGSlidesConfig, type GSlidesConfig, type GSlidesConfigRedacted } from './config.ts'
 
 export interface GSlidesResourceState {

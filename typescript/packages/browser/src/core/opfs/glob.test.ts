@@ -13,7 +13,7 @@
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
 import { describe, expect, it } from 'vitest'
-import { PathSpec } from '@struktoai/mirage-core'
+import { PathSpec } from '@viewengine/mirage-core'
 import { makeMockRoot, spec } from '../../test-utils.ts'
 import { resolveGlob } from './glob.ts'
 import { writeBytes } from './write.ts'

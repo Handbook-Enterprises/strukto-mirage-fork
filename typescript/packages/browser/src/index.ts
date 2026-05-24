@@ -12,8 +12,8 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-export * from '@struktoai/mirage-core'
-export { MountMode } from '@struktoai/mirage-core'
+export * from '@viewengine/mirage-core'
+export { MountMode } from '@viewengine/mirage-core'
 export { Workspace } from './workspace.ts'
 export {
   OPFSResource,

@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { type PathSpec, record, ResourceName } from '@struktoai/mirage-core'
+import { type PathSpec, record, ResourceName } from '@viewengine/mirage-core'
 import { isNotFound, resolveFileHandle } from './utils.ts'
 
 export async function read(root: FileSystemDirectoryHandle, path: PathSpec): Promise<Uint8Array> {

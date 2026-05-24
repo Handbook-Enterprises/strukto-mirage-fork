@@ -27,7 +27,7 @@ import {
   type CommandOpts,
   type PathSpec,
   type SedCommand,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { writeBytes as opfsWrite } from '../../../core/opfs/write.ts'
 import { stream as opfsStream } from '../../../core/opfs/stream.ts'
 import type { OPFSAccessor } from '../../../accessor/opfs.ts'

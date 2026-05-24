@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { normMountPrefix, type Resource, type Workspace } from '@struktoai/mirage-core'
+import { normMountPrefix, type Resource, type Workspace } from '@viewengine/mirage-core'
 import type { WorkspaceEntry } from './registry.ts'
 import type {
   MountSummary,

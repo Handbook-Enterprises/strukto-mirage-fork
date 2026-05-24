@@ -20,7 +20,7 @@ import {
   Precision,
   ProvisionResult,
   type Resource,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import type { RedisAccessor } from '../../../accessor/redis.ts'
 import { stat as redisStat } from '../../../core/redis/stat.ts'
 

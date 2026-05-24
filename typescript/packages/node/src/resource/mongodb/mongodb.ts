@@ -32,7 +32,7 @@ import {
   resolveMongoGlob,
   ResourceName,
   resolveMongoDBConfig,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { MongoDBStore } from './store.ts'
 
 void detectMongoScope

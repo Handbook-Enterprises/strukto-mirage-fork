@@ -33,7 +33,7 @@ import {
   ResourceName,
   resolvePostgresConfig,
   resolvePostgresGlob,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { NeonPgDriver } from './neon_driver.ts'
 
 export interface PostgresResourceOptions {

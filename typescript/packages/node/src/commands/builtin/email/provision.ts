@@ -19,7 +19,7 @@ import {
   type CommandOpts,
   type IndexCacheStore,
   type PathSpec,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 
 export async function fileReadProvision(
   _accessor: Accessor,

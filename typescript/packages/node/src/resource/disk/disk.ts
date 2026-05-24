@@ -23,7 +23,7 @@ import {
   type RegisteredOp,
   type Resource,
   ResourceName,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { DISK_COMMANDS } from '../../commands/builtin/disk/index.ts'
 import { appendBytes as appendCore } from '../../core/disk/append.ts'
 import { copy as copyCore } from '../../core/disk/copy.ts'

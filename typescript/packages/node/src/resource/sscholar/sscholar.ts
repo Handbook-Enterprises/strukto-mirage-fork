@@ -33,7 +33,7 @@ import {
   sscholarPaperRead,
   sscholarPaperReaddir,
   sscholarPaperStat,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 
 export interface SSCholarPaperResourceOptions {
   config?: SSCholarConfig

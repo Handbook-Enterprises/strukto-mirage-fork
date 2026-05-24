@@ -33,7 +33,7 @@ import {
   sscholarPaperRead,
   sscholarPaperReaddir,
   sscholarPaperStat,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { HttpSSCholarDriver } from './http_driver.ts'
 
 export interface SSCholarPaperResourceOptions {

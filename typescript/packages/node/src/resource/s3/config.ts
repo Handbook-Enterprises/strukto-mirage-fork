@@ -19,7 +19,7 @@ import {
   type S3Config as S3CoreConfig,
   type S3ConfigRedacted as S3CoreConfigRedacted,
   z,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 
 export interface S3Config extends S3CoreConfig {
   profile?: string

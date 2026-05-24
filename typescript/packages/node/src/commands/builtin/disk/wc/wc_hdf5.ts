@@ -23,7 +23,7 @@ import {
   type CommandOpts,
   type PathSpec,
   hdf5Wc,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { stream as diskStream } from '../../../../core/disk/stream.ts'
 import type { DiskAccessor } from '../../../../accessor/disk.ts'
 

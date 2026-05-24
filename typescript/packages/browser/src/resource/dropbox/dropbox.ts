@@ -30,7 +30,7 @@ import {
   dropboxReaddir,
   dropboxResolveGlob,
   dropboxStat,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { redactDropboxConfig, type DropboxConfig, type DropboxConfigRedacted } from './config.ts'
 
 export interface DropboxResourceState {

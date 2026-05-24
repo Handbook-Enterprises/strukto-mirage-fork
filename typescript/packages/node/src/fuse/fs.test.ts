@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { FileStat, FileType, MountMode, RAMResource } from '@struktoai/mirage-core'
+import { FileStat, FileType, MountMode, RAMResource } from '@viewengine/mirage-core'
 import { describe, expect, it, vi } from 'vitest'
 import { Workspace } from '../workspace.ts'
 import { MirageFS, type FuseAttr } from './fs.ts'

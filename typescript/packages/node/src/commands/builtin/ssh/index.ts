@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import type { RegisteredCommand } from '@struktoai/mirage-core'
+import type { RegisteredCommand } from '@viewengine/mirage-core'
 import { SSH_BASENAME } from './basename.ts'
 import { SSH_CAT } from './cat/cat.ts'
 import { SSH_CP } from './cp.ts'

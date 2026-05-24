@@ -30,7 +30,7 @@ import {
   type CommandFnResult,
   type CommandOpts,
   type FileStat,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { readdir as sshReaddir } from '../../../core/ssh/readdir.ts'
 import { stat as sshStat } from '../../../core/ssh/stat.ts'
 import { stream as sshStream } from '../../../core/ssh/stream.ts'

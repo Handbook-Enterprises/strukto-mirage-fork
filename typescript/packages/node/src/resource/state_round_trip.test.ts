@@ -16,7 +16,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync, existsSync
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { RAMResource } from '@struktoai/mirage-core'
+import { RAMResource } from '@viewengine/mirage-core'
 import { DiskResource } from './disk/disk.ts'
 import { S3Resource } from './s3/s3.ts'
 import { GCSResource } from './gcs/gcs.ts'

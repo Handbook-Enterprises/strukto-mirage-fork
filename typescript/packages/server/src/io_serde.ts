@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { ExecuteResult } from '@struktoai/mirage-core'
+import { ExecuteResult } from '@viewengine/mirage-core'
 
 export interface IoResultDict {
   kind: 'io'

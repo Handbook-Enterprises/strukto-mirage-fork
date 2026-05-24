@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import type { Workspace as CoreWorkspace } from '@struktoai/mirage-core'
+import type { Workspace as CoreWorkspace } from '@viewengine/mirage-core'
 import { NoSuchBranchError } from './errors.ts'
 import {
   blobToMeta,

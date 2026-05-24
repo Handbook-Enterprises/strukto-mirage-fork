@@ -30,7 +30,7 @@ import {
   gmailReaddir,
   gmailResolveGlob,
   gmailStat,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { redactGmailConfig, type GmailConfig, type GmailConfigRedacted } from './config.ts'
 
 export interface GmailResourceState {

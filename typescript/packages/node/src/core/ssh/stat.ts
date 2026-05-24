@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import type { FileStat, PathSpec } from '@struktoai/mirage-core'
+import type { FileStat, PathSpec } from '@viewengine/mirage-core'
 import type { Stats } from 'ssh2'
 import type { SSHAccessor } from '../../accessor/ssh.ts'
 import { attrsToFileStat } from './entry.ts'

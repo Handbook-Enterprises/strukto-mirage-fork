@@ -21,7 +21,7 @@ import {
   type ByteSource,
   type CommandFnResult,
   type CommandOpts,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { du as opfsDu } from '../../../core/opfs/du.ts'
 import type { OPFSAccessor } from '../../../accessor/opfs.ts'
 

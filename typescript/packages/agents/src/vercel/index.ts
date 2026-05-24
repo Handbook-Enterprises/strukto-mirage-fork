@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { encodeBase64 } from '@struktoai/mirage-core'
+import { encodeBase64 } from '@viewengine/mirage-core'
 import type { Workspace } from '@struktoai/mirage-node'
 import { tool } from 'ai'
 import { z } from 'zod'

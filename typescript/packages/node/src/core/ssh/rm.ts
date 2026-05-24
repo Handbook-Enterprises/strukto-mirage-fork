@@ -13,7 +13,7 @@
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
 import type { FileEntryWithStats, SFTPWrapper, Stats } from 'ssh2'
-import type { PathSpec } from '@struktoai/mirage-core'
+import type { PathSpec } from '@viewengine/mirage-core'
 import type { SSHAccessor } from '../../accessor/ssh.ts'
 import { enoent, isDirectoryAttrs, isNoSuchFile, joinRoot, stripPrefix } from './utils.ts'
 

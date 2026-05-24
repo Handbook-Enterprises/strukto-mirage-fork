@@ -31,7 +31,7 @@ import {
   discordReaddir,
   discordStat,
   resolveDiscordGlob,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { redactDiscordConfig, type DiscordConfig, type DiscordConfigRedacted } from './config.ts'
 
 class NodeDiscordTransport extends HttpDiscordTransport {

@@ -12,8 +12,8 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { loadOptionalPeer, type PgDriver, type PgQueryResult } from '@struktoai/mirage-core'
-import type { PostgresConfigResolved } from '@struktoai/mirage-core'
+import { loadOptionalPeer, type PgDriver, type PgQueryResult } from '@viewengine/mirage-core'
+import type { PostgresConfigResolved } from '@viewengine/mirage-core'
 
 interface PgPoolLike {
   query: (

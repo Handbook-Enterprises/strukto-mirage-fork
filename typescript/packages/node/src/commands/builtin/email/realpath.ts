@@ -21,7 +21,7 @@ import {
   type ByteSource,
   type CommandFnResult,
   type CommandOpts,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import type { EmailAccessor } from '../../../accessor/email.ts'
 import { stat as emailStat } from '../../../core/email/stat.ts'
 

@@ -21,7 +21,7 @@ import {
   type RegisteredOp,
   type Resource,
   ResourceName,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { SSHAccessor } from '../../accessor/ssh.ts'
 import { SSH_COMMANDS } from '../../commands/builtin/ssh/index.ts'
 import { appendBytes as appendCore } from '../../core/ssh/append.ts'

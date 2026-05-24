@@ -23,7 +23,7 @@ import {
   type ShellParser,
   Workspace as CoreWorkspace,
   type WorkspaceOptions,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { nativeExec, type NativeExecOptions } from './native.ts'
 import { FuseManager } from './workspace/fuse.ts'
 

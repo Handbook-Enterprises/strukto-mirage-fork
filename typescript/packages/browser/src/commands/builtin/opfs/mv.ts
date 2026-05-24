@@ -20,7 +20,7 @@ import {
   type CommandFnResult,
   type CommandOpts,
   type PathSpec,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { rename as opfsRename } from '../../../core/opfs/rename.ts'
 import type { OPFSAccessor } from '../../../accessor/opfs.ts'
 

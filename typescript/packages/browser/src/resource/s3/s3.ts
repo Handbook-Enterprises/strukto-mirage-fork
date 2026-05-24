@@ -44,7 +44,7 @@ import {
   truncate as truncateCore,
   unlink as unlinkCore,
   write as writeCore,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { redactConfig, type S3Config, type S3ConfigRedacted } from './config.ts'
 
 export const S3_BROWSER_PROMPT = `{prefix}

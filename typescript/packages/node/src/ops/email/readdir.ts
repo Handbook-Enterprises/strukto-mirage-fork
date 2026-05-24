@@ -12,8 +12,8 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import type { OpKwargs, PathSpec, RegisteredOp } from '@struktoai/mirage-core'
-import { ResourceName } from '@struktoai/mirage-core'
+import type { OpKwargs, PathSpec, RegisteredOp } from '@viewengine/mirage-core'
+import { ResourceName } from '@viewengine/mirage-core'
 import type { EmailAccessor } from '../../accessor/email.ts'
 import { readdir as coreReaddir } from '../../core/email/readdir.ts'
 

@@ -14,7 +14,7 @@
 
 import { Buffer } from 'node:buffer'
 import { createRequire } from 'node:module'
-import { FileType, type Workspace } from '@struktoai/mirage-core'
+import { FileType, type Workspace } from '@viewengine/mirage-core'
 
 const requireCjs = createRequire(import.meta.url)
 const fs = requireCjs('node:fs') as Record<string, unknown>

@@ -24,7 +24,7 @@ import {
   type CommandOpts,
   type PathSpec,
   unifiedDiff,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { stream as redisStream } from '../../../core/redis/stream.ts'
 import type { RedisAccessor } from '../../../accessor/redis.ts'
 

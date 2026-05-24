@@ -12,5 +12,5 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-export type { PostgresConfig, PostgresConfigResolved } from '@struktoai/mirage-core'
-export { normalizePostgresConfig, resolvePostgresConfig } from '@struktoai/mirage-core'
+export type { PostgresConfig, PostgresConfigResolved } from '@viewengine/mirage-core'
+export { normalizePostgresConfig, resolvePostgresConfig } from '@viewengine/mirage-core'

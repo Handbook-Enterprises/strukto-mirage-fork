@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { redactConfigWithSchema, secretSchema, z } from '@struktoai/mirage-core'
+import { redactConfigWithSchema, secretSchema, z } from '@viewengine/mirage-core'
 
 export interface DiscordConfig {
   proxyUrl: string

@@ -20,7 +20,7 @@ import {
   type CommandFnResult,
   type CommandOpts,
   type PathSpec,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { mkdir as sshMkdir } from '../../../core/ssh/mkdir.ts'
 import type { SSHAccessor } from '../../../accessor/ssh.ts'
 

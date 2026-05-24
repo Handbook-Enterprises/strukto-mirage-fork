@@ -31,7 +31,7 @@ import {
   ResourceName,
   resolvePostgresConfig,
   resolvePostgresGlob,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { PostgresStore } from './store.ts'
 
 export interface PostgresResourceOptions {

@@ -24,7 +24,7 @@ import {
   type CommandOpts,
   type FileStat,
   type PathSpec,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { stat as redisStat } from '../../../../core/redis/stat.ts'
 import type { RedisAccessor } from '../../../../accessor/redis.ts'
 

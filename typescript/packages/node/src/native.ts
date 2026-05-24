@@ -14,7 +14,7 @@
 
 import { spawn, type ChildProcess, type SpawnOptionsWithoutStdio } from 'node:child_process'
 import type { Readable } from 'node:stream'
-import { ExecuteResult } from '@struktoai/mirage-core'
+import { ExecuteResult } from '@viewengine/mirage-core'
 
 export interface NativeExecOptions {
   cwd: string

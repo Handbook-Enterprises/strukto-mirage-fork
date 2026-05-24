@@ -26,7 +26,7 @@ import {
   type CommandOpts,
   type PathSpec,
   type SortKeyOptions,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { stream as diskStream } from '../../../core/disk/stream.ts'
 import type { DiskAccessor } from '../../../accessor/disk.ts'
 

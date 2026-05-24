@@ -23,7 +23,7 @@ import {
   type ByteSource,
   type CommandFnResult,
   type CommandOpts,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { stream as redisStream } from '../../../core/redis/stream.ts'
 import { writeBytes as redisWrite } from '../../../core/redis/write.ts'
 import { mkdir as redisMkdir } from '../../../core/redis/mkdir.ts'

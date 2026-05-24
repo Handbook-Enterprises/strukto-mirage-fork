@@ -23,7 +23,7 @@ import {
   type CommandFnResult,
   type CommandOpts,
   type FileStat,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { stat as diskStat } from '../../../../core/disk/stat.ts'
 import { readdir as diskReaddir } from '../../../../core/disk/readdir.ts'
 import type { DiskAccessor } from '../../../../accessor/disk.ts'

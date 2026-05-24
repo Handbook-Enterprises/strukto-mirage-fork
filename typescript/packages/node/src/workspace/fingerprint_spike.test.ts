@@ -16,7 +16,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { ConsistencyPolicy, MountMode, RAMResource } from '@struktoai/mirage-core'
+import { ConsistencyPolicy, MountMode, RAMResource } from '@viewengine/mirage-core'
 import { DiskResource } from '../resource/disk/disk.ts'
 import { Workspace } from '../workspace.ts'
 

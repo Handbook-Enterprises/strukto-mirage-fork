@@ -16,7 +16,7 @@ import { spawn } from 'node:child_process'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { RAMResource, MountMode, type Resource } from '@struktoai/mirage-core'
+import { RAMResource, MountMode, type Resource } from '@viewengine/mirage-core'
 import { DiskResource } from '../resource/disk/disk.ts'
 import { Workspace } from '../workspace.ts'
 

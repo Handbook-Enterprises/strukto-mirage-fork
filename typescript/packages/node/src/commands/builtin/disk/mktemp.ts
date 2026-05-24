@@ -21,7 +21,7 @@ import {
   type ByteSource,
   type CommandFnResult,
   type CommandOpts,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { writeBytes as diskWrite } from '../../../core/disk/write.ts'
 import { mkdir as diskMkdir } from '../../../core/disk/mkdir.ts'
 import type { DiskAccessor } from '../../../accessor/disk.ts'

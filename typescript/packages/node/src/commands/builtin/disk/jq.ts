@@ -31,7 +31,7 @@ import {
   type CommandFnResult,
   type CommandOpts,
   type PathSpec,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { stream as diskStream } from '../../../core/disk/stream.ts'
 import { stat as diskStat } from '../../../core/disk/stat.ts'
 import type { DiskAccessor } from '../../../accessor/disk.ts'

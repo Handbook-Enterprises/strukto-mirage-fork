@@ -21,7 +21,7 @@ import {
   type CommandFnResult,
   type CommandOpts,
   type PathSpec,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { rmdir as diskRmdir } from '../../../core/disk/rmdir.ts'
 import { stat as diskStat } from '../../../core/disk/stat.ts'
 import { unlink as diskUnlink } from '../../../core/disk/unlink.ts'

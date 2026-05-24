@@ -23,7 +23,7 @@ import {
   type CommandOpts,
   type PathSpec,
   type RAMAccessor,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { transcribe } from '../utils.ts'
 import { readRam } from './read.ts'
 

@@ -22,7 +22,7 @@ import {
   REDACTED_SECRET,
   type Resource,
   ResourceName,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { REDIS_COMMANDS } from '../../commands/builtin/redis/index.ts'
 import type { RedisClientType } from 'redis'
 import { RedisAccessor } from '../../accessor/redis.ts'

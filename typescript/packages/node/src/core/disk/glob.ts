@@ -13,7 +13,7 @@
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
 import type { DiskAccessor } from '../../accessor/disk.ts'
-import { type IndexCacheStore, PathSpec } from '@struktoai/mirage-core'
+import { type IndexCacheStore, PathSpec } from '@viewengine/mirage-core'
 import { SCOPE_ERROR } from './constants.ts'
 import { readdir } from './readdir.ts'
 

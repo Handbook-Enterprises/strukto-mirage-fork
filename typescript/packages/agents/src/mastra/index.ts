@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import type { Workspace } from '@struktoai/mirage-core'
+import type { Workspace } from '@viewengine/mirage-core'
 import { createTool } from '@mastra/core/tools'
 import { z } from 'zod'
 

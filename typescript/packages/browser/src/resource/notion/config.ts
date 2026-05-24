@@ -13,7 +13,7 @@
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
 import type { OAuthClientProvider } from '@modelcontextprotocol/sdk/client/auth.js'
-import { redactConfigWithSchema, secretSchema, z } from '@struktoai/mirage-core'
+import { redactConfigWithSchema, secretSchema, z } from '@viewengine/mirage-core'
 
 export interface NotionConfig {
   authProvider: OAuthClientProvider

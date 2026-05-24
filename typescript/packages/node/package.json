@@ -48,7 +48,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@struktoai/mirage-core": "workspace:*",
+    "@viewengine/mirage-core": "workspace:*",
     "fs-monkey": "^1.1.0",
     "imapflow": "^1.0.0",
     "mailparser": "^3.6.0",

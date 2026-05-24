@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { loadOptionalPeer } from '@struktoai/mirage-core'
+import { loadOptionalPeer } from '@viewengine/mirage-core'
 import type * as Nodemailer from 'nodemailer'
 import type { EmailConfig } from '../../resource/email/config.ts'
 import type { FetchedMessage } from './_client.ts'

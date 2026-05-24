@@ -20,7 +20,7 @@ import {
   type CommandFnResult,
   type CommandOpts,
   type PathSpec,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { writeBytes as redisWrite } from '../../../core/redis/write.ts'
 import { exists as redisExists } from '../../../core/redis/exists.ts'
 import type { RedisAccessor } from '../../../accessor/redis.ts'

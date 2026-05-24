@@ -16,7 +16,7 @@ import {
   normMountPrefix,
   resourceStateRequiresOverride,
   type Workspace as CoreWorkspace,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { buildResource, Workspace, type Resource } from '@struktoai/mirage-node'
 
 export interface OverrideMountBlock {

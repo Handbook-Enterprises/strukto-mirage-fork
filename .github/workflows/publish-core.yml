@@ -1,0 +1,65 @@
+name: publish @viewengine/mirage-core
+
+# Publishes typescript/packages/core to npm under @viewengine/mirage-core on
+# tag push matching `core-v*` (e.g. `core-v0.1.0-viewengine.0`). The tag's
+# version suffix MUST match `typescript/packages/core/package.json` version
+# — the workflow does NOT bump the version, only publishes what's in the
+# tagged tree. Bump the version in a commit first, then tag.
+#
+# Requires repo secret NPM_TOKEN with publish rights to @viewengine.
+
+"on":
+  push:
+    tags: ["core-v*"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Run npm publish --dry-run only (no real publish)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write   # for npm provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: typescript
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org/"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10.32.1"
+
+      - name: Confirm tag matches package version
+        if: github.event_name == 'push'
+        run: |
+          PKG_VERSION=$(node -p "require('./packages/core/package.json').version")
+          TAG_VERSION="${GITHUB_REF_NAME#core-v}"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::tag $GITHUB_REF_NAME implies version $TAG_VERSION but core/package.json is $PKG_VERSION"
+            exit 1
+          fi
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r --filter "@viewengine/mirage-core..." build
+
+      - name: Publish @viewengine/mirage-core
+        working-directory: typescript/packages/core
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            npm publish --dry-run --access public --provenance
+          else
+            npm publish --access public --provenance
+          fi

@@ -20,7 +20,7 @@ import {
   type CommandFnResult,
   type CommandOpts,
   type PathSpec,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { rename as diskRename } from '../../../core/disk/rename.ts'
 import { stat as diskStat } from '../../../core/disk/stat.ts'
 import type { DiskAccessor } from '../../../accessor/disk.ts'

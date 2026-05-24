@@ -27,7 +27,7 @@ import {
   type CommandOpts,
   type TarEntry,
   writeTar,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { stream as diskStream } from '../../../core/disk/stream.ts'
 import { writeBytes as diskWrite } from '../../../core/disk/write.ts'
 import { mkdir as diskMkdir } from '../../../core/disk/mkdir.ts'

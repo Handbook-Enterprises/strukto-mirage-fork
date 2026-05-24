@@ -12,7 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { ResourceName, SLACK_COMMANDS, SLACK_VFS_OPS, PathSpec } from '@struktoai/mirage-core'
+import { ResourceName, SLACK_COMMANDS, SLACK_VFS_OPS, PathSpec } from '@viewengine/mirage-core'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { buildResource } from '../registry.ts'
 import { normalizeSlackConfig, redactSlackConfig } from './config.ts'

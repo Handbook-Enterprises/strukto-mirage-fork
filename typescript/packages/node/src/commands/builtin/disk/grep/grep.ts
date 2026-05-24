@@ -30,7 +30,7 @@ import {
   type ByteSource,
   type CommandFnResult,
   type CommandOpts,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { stream as diskStream } from '../../../../core/disk/stream.ts'
 import { stat as diskStat } from '../../../../core/disk/stat.ts'
 import { find as diskFind } from '../../../../core/disk/find.ts'

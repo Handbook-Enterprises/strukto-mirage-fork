@@ -20,7 +20,7 @@ import {
   type CommandFnResult,
   type CommandOpts,
   type PathSpec,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { mkdir as opfsMkdir } from '../../../core/opfs/mkdir.ts'
 import type { OPFSAccessor } from '../../../accessor/opfs.ts'
 

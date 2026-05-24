@@ -12,4 +12,4 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-export { HttpSSCholarDriver, type HttpSSCholarDriverOptions } from '@struktoai/mirage-core'
+export { HttpSSCholarDriver, type HttpSSCholarDriverOptions } from '@viewengine/mirage-core'

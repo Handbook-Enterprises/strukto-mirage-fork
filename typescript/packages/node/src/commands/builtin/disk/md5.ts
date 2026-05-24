@@ -23,7 +23,7 @@ import {
   type CommandFnResult,
   type CommandOpts,
   type PathSpec,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { read as diskRead } from '../../../core/disk/read.ts'
 import type { DiskAccessor } from '../../../accessor/disk.ts'
 

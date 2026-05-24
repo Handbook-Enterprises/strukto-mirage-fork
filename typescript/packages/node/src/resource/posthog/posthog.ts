@@ -33,7 +33,7 @@ import {
   posthogStat,
   resolvePostHogConfig,
   resolvePostHogGlob,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 
 export interface PostHogResourceOptions {
   config?: PostHogConfig

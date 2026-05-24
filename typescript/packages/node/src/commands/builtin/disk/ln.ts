@@ -22,7 +22,7 @@ import {
   type CommandFnResult,
   type CommandOpts,
   type PathSpec,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { stream as diskStream } from '../../../core/disk/stream.ts'
 import { writeBytes as diskWrite } from '../../../core/disk/write.ts'
 import { exists as diskExists } from '../../../core/disk/exists.ts'

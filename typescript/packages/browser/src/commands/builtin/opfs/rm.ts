@@ -21,7 +21,7 @@ import {
   type CommandFnResult,
   type CommandOpts,
   type PathSpec,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { rmdir as opfsRmdir } from '../../../core/opfs/rmdir.ts'
 import { stat as opfsStat } from '../../../core/opfs/stat.ts'
 import { unlink as opfsUnlink } from '../../../core/opfs/unlink.ts'

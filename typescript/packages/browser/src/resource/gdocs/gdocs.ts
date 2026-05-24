@@ -31,7 +31,7 @@ import {
   gdocsReaddir,
   gdocsResolveGlob,
   gdocsStat,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { redactGDocsConfig, type GDocsConfig, type GDocsConfigRedacted } from './config.ts'
 
 export interface GDocsResourceState {

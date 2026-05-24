@@ -20,7 +20,7 @@ import {
   specOf,
   type CommandFnResult,
   type CommandOpts,
-} from '@struktoai/mirage-core'
+} from '@viewengine/mirage-core'
 import { copy as sshCopy } from '../../../core/ssh/copy.ts'
 import { find as sshFind } from '../../../core/ssh/find.ts'
 import { stat as sshStat } from '../../../core/ssh/stat.ts'

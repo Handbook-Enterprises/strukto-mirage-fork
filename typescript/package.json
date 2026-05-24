@@ -21,7 +21,7 @@
     "@changesets/cli": "^2.30.0",
     "@eslint/js": "^9.39.4",
     "@struktoai/mirage-browser": "workspace:*",
-    "@struktoai/mirage-core": "workspace:*",
+    "@viewengine/mirage-core": "workspace:*",
     "@struktoai/mirage-node": "workspace:*",
     "@types/node": "^22.0.0",
     "aws-sdk-client-mock": "^4.1.0",
