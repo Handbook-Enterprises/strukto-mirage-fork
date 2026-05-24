@@ -31,6 +31,13 @@ function fnmatch(name: string, pattern: string): boolean {
   return new RegExp(`^${re}$`).test(name)
 }
 
+
+function joinFindPath(parent: string, child: string): string {
+  const base = parent.replace(/\/+$/, "")
+  const c = child.replace(/^\/+/, "")
+  return base === "" || base === "/" ? "/" + c : base + "/" + c
+}
+
 async function walk(
   accessor: GmailAccessor,
   path: PathSpec,
@@ -49,11 +56,12 @@ async function walk(
   for (const child of children) {
     const isFolder = child.endsWith('/')
     const trimmed = isFolder ? child.replace(/\/+$/, '') : child
-    results.push(trimmed)
+    const childPath = joinFindPath(path.original, trimmed)
+    results.push(childPath)
     if (isFolder) {
       const childSpec = new PathSpec({
-        original: trimmed,
-        directory: trimmed,
+        original: childPath,
+        directory: childPath,
         resolved: false,
         prefix: path.prefix,
       })

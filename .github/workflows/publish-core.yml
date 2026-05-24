@@ -8,7 +8,7 @@ name: publish @viewengine/mirage-core
 #
 # Requires repo secret NPM_TOKEN with publish rights to @viewengine.
 
-on:
+"on":
   push:
     tags: ["core-v*"]
   workflow_dispatch:

@@ -31,6 +31,13 @@ function fnmatch(name: string, pattern: string): boolean {
   return new RegExp(`^${re}$`).test(name)
 }
 
+
+function joinFindPath(parent: string, child: string): string {
+  const base = parent.replace(/\/+$/, "")
+  const c = child.replace(/^\/+/, "")
+  return base === "" || base === "/" ? "/" + c : base + "/" + c
+}
+
 async function walk(
   accessor: GSheetsAccessor,
   path: PathSpec,
@@ -47,12 +54,13 @@ async function walk(
   }
   const results: string[] = []
   for (const child of children) {
-    results.push(child)
+    const childPath = joinFindPath(path.original, child)
+    results.push(childPath)
     const isTerminal = child.endsWith('.json') || child.endsWith('.jsonl')
     if (!isTerminal) {
       const childSpec = new PathSpec({
-        original: child,
-        directory: child,
+        original: childPath,
+        directory: childPath,
         resolved: false,
         prefix: path.prefix,
       })
