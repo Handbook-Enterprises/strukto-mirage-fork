@@ -15,8 +15,16 @@
 import type { GmailAccessor } from '../../accessor/gmail.ts'
 import type { IndexCacheStore } from '../../cache/index/store.ts'
 import { PathSpec } from '../../types.ts'
-import { getAttachment, getMessageProcessed } from './messages.ts'
-import { readdir } from './readdir.ts'
+import { getAttachment, getMessageProcessed, getThreadFull } from './messages.ts'
+import {
+  PARTICIPANTS_FILE,
+  parseThreadDirName,
+  parseThreadMessageFilename,
+  readdir,
+  threadParticipants,
+  THREADS_DIR,
+  THREAD_META_FILE,
+} from './readdir.ts'
 
 const ENC = new TextEncoder()
 
@@ -65,7 +73,13 @@ export async function read(
     if (result.entry === undefined || result.entry === null) throw enoent(path.original)
   }
   const rt = result.entry.resourceType
-  if (rt === 'gmail/label' || rt === 'gmail/date' || rt === 'gmail/attachment_dir') {
+  if (
+    rt === 'gmail/label' ||
+    rt === 'gmail/date' ||
+    rt === 'gmail/attachment_dir' ||
+    rt === 'gmail/threads_root' ||
+    rt === 'gmail/thread_dir'
+  ) {
     throw eisdir(path.original)
   }
   if (rt === 'gmail/attachment') {
@@ -76,6 +90,39 @@ export async function read(
     }
     return getAttachment(accessor.tokenManager, parentResult.entry.id, result.entry.id)
   }
+  // Synthetic per-thread sidecar files. The IndexEntry's id was set to
+  // `<threadId>:participants` / `<threadId>:meta` at directory-listing
+  // time so we can recover the real threadId without re-parsing the dir
+  // name. participants.txt is one email per line (deduped, sorted) —
+  // pairs with calendar's per-event attendees.txt for cross-mount
+  // `grep -l <email>` queries. meta.json is the thread shell from
+  // gmail.users.threads.get without per-message payloads (size +
+  // historyId only) so agents can see "is this thread big? recent?"
+  // without paying for full bodies.
+  if (rt === 'gmail/thread_participants' || rt === 'gmail/thread_meta') {
+    const [tid, kind] = result.entry.id.split(':', 2)
+    if (tid === undefined || tid === '') throw enoent(path.original)
+    const thread = await getThreadFull(accessor.tokenManager, tid)
+    if (kind === 'participants') {
+      const lines = threadParticipants(thread.messages ?? [])
+      return ENC.encode(lines.length === 0 ? '' : `${lines.join('\n')}\n`)
+    }
+    return ENC.encode(
+      JSON.stringify({
+        id: thread.id,
+        historyId: thread.historyId,
+        messageCount: thread.messages?.length ?? 0,
+      }),
+    )
+  }
   const processed = await getMessageProcessed(accessor.tokenManager, result.entry.id)
   return ENC.encode(JSON.stringify(processed))
 }
+
+// Touch unused imports so eslint/tsc don't flag them; they're part of the
+// public surface for callers reading thread paths from outside read.ts.
+void PARTICIPANTS_FILE
+void THREAD_META_FILE
+void THREADS_DIR
+void parseThreadDirName
+void parseThreadMessageFilename

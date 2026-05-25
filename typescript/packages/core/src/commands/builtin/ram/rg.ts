@@ -44,6 +44,7 @@ interface RgFlags {
   fileType: string | null
   globPattern: string | null
   hidden: boolean
+  excludePattern: string | null
 }
 
 function parseRgFlags(flags: Record<string, string | boolean>): RgFlags {
@@ -67,6 +68,7 @@ function parseRgFlags(flags: Record<string, string | boolean>): RgFlags {
     fileType: typeof flags.type === 'string' ? flags.type : null,
     globPattern: typeof flags.glob === 'string' ? flags.glob : null,
     hidden: flags.hidden === true,
+    excludePattern: typeof flags.exclude === 'string' ? flags.exclude : null,
   }
 }
 
@@ -147,6 +149,7 @@ async function rgCommand(
         fileType: flags.fileType,
         globPattern: flags.globPattern,
         hidden: flags.hidden,
+        excludePattern: flags.excludePattern,
       },
       warnings,
     )
@@ -197,6 +200,7 @@ async function rgCommand(
         fileType: flags.fileType,
         globPattern: flags.globPattern,
         hidden: flags.hidden,
+        excludePattern: flags.excludePattern,
       },
       warnings,
     )

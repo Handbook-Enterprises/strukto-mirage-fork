@@ -82,6 +82,7 @@ async function rgCommand(
   const onlyMatching = opts.flags.o === true
   const maxCount = typeof opts.flags.m === 'string' ? Number.parseInt(opts.flags.m, 10) : null
   const hidden = opts.flags.hidden === true
+  const excludePattern = typeof opts.flags.exclude === 'string' ? opts.flags.exclude : null
   const pat = compilePattern(pattern, ignoreCase, fixedString, wholeWord)
 
   const lineOpts: GrepLinesOptions = {
@@ -120,8 +121,19 @@ async function rgCommand(
     const sortedUnique = [...new Set(blobPaths)].sort()
     const allResults: string[] = []
     let anyMatch = false
+    const fnmatch = (name: string, glob: string): boolean => {
+      const re = glob
+        .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+        .replace(/\?/g, '.')
+        .replace(/\*/g, '.*')
+      return new RegExp(`^${re}$`).test(name)
+    }
     for (const bp of sortedUnique) {
       if (!hidden && bp.split('/').some((part) => part.startsWith('.'))) continue
+      if (excludePattern !== null) {
+        const baseName = bp.split('/').pop() ?? bp
+        if (fnmatch(baseName, excludePattern)) continue
+      }
       let data: Uint8Array
       try {
         const spec = new PathSpec({
