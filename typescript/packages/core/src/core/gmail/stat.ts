@@ -111,6 +111,26 @@ export async function stat(
       extra: { attachment_id: result.entry.id },
     })
   }
+  // Synthetic /threads/ view entries — must report DIRECTORY for the
+  // root + per-thread dirs or `ls` treats them as files and silently
+  // returns the dir name instead of listing contents.
+  if (rt === 'gmail/threads_root' || rt === 'gmail/thread_dir') {
+    return new FileStat({ name: vfsName, type: FileType.DIRECTORY })
+  }
+  if (rt === 'gmail/thread_message') {
+    return new FileStat({
+      name: vfsName,
+      type: FileType.JSON,
+      size: result.entry.size,
+      extra: { message_id: result.entry.id },
+    })
+  }
+  if (rt === 'gmail/thread_participants') {
+    return new FileStat({ name: vfsName, type: FileType.TEXT })
+  }
+  if (rt === 'gmail/thread_meta') {
+    return new FileStat({ name: vfsName, type: FileType.JSON })
+  }
   return new FileStat({
     name: vfsName,
     type: FileType.JSON,
