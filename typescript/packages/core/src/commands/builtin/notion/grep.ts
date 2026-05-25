@@ -103,6 +103,11 @@ async function grepCommand(
     const warnings: string[] = []
 
     if (f.filesOnly) {
+      // Collect (path, bytes) for every file the recursive walk reads so the
+      // workspace FileCache can dedupe — otherwise every grep -r re-fetches
+      // every Notion page from the API.
+      const reads: Record<string, Uint8Array> = {}
+      const cachePaths: string[] = []
       const results = await grepFilesOnly(
         rd,
         st,
@@ -119,6 +124,10 @@ async function grepCommand(
           onlyMatching: f.onlyMatching,
           maxCount: f.maxCount,
           wholeWord: f.wholeWord,
+          onRead: (p, d) => {
+            reads[p] = d
+            cachePaths.push(p)
+          },
         },
         warnings,
       )
@@ -126,12 +135,21 @@ async function grepCommand(
       if (results.length === 0) {
         return [
           new Uint8Array(0),
-          new IOResult({ exitCode: 1, ...(stderr !== undefined ? { stderr } : {}) }),
+          new IOResult({
+            exitCode: 1,
+            ...(stderr !== undefined ? { stderr } : {}),
+            reads,
+            cache: cachePaths,
+          }),
         ]
       }
       return [
         ENC.encode(results.join('\n') + '\n'),
-        new IOResult({ ...(stderr !== undefined ? { stderr } : {}) }),
+        new IOResult({
+          ...(stderr !== undefined ? { stderr } : {}),
+          reads,
+          cache: cachePaths,
+        }),
       ]
     }
 
@@ -153,6 +171,8 @@ async function grepCommand(
           }),
         ]
       }
+      const reads: Record<string, Uint8Array> = {}
+      const cachePaths: string[] = []
       const results = await grepRecursive(
         rd,
         st,
@@ -169,14 +189,18 @@ async function grepCommand(
           onlyMatching: f.onlyMatching,
           maxCount: f.maxCount,
           wholeWord: f.wholeWord,
+          onRead: (p, d) => {
+            reads[p] = d
+            cachePaths.push(p)
+          },
         },
         warnings,
       )
       const stderr = warnings.length > 0 ? ENC.encode(warnings.join('\n')) : null
       if (results.length === 0) {
-        return [new Uint8Array(0), new IOResult({ exitCode: 1, stderr })]
+        return [new Uint8Array(0), new IOResult({ exitCode: 1, stderr, reads, cache: cachePaths })]
       }
-      return [ENC.encode(results.join('\n')), new IOResult({ stderr })]
+      return [ENC.encode(results.join('\n')), new IOResult({ stderr, reads, cache: cachePaths })]
     }
 
     const data = await notionRead(accessor, target, opts.index ?? undefined)

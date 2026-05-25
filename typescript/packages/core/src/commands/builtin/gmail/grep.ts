@@ -159,6 +159,11 @@ async function grepCommand(
       const warnings: string[] = []
       const firstResolved = resolved[0]
       if (firstResolved === undefined) return [new Uint8Array(0), new IOResult({ exitCode: 1 })]
+      // Collect (path, bytes) for every file the recursive walk reads so the
+      // workspace FileCache can dedupe — otherwise every grep -r re-fetches
+      // every Gmail message from the API.
+      const reads: Record<string, Uint8Array> = {}
+      const cachePaths: string[] = []
       const results = await grepFilesOnly(
         readdirFn,
         statFn,
@@ -175,13 +180,18 @@ async function grepCommand(
           onlyMatching: f.onlyMatching,
           maxCount: f.maxCount,
           wholeWord: f.wholeWord,
+          onRead: (p, d) => {
+            reads[p] = d
+            cachePaths.push(p)
+          },
         },
         warnings,
       )
       const stderr = warnings.length > 0 ? ENC.encode(warnings.join('\n')) : null
-      if (results.length === 0) return [new Uint8Array(0), new IOResult({ exitCode: 1, stderr })]
+      if (results.length === 0)
+        return [new Uint8Array(0), new IOResult({ exitCode: 1, stderr, reads, cache: cachePaths })]
       const out: ByteSource = ENC.encode(results.join('\n'))
-      return [out, new IOResult({ stderr })]
+      return [out, new IOResult({ stderr, reads, cache: cachePaths })]
     }
 
     const pat = compilePattern(pattern, f.ignoreCase, f.fixedString, f.wholeWord)

@@ -172,6 +172,12 @@ export interface GrepFilesOnlyOptions {
   onlyMatching: boolean
   maxCount: number | null
   wholeWord: boolean
+  /** Fired once per file the recursive walk reads. Callers can collect
+   *  (path, bytes) tuples and pass them to IOResult({ reads, cache }) so the
+   *  workspace FileCache dedupes the read across subsequent grep / cat / wc
+   *  calls. Without this, recursive grep re-fetches every file from the
+   *  backing API every call. Same pattern `cat` already uses. */
+  onRead?: (path: string, data: Uint8Array) => void
 }
 
 export async function grepRecursive(
@@ -222,9 +228,9 @@ export async function grepRecursive(
       for (const r of sub) results.push(r)
     } else {
       try {
-        const lines = new TextDecoder('utf-8', { fatal: false })
-          .decode(await readBytesFn(entry))
-          .split('\n')
+        const data = await readBytesFn(entry)
+        if (opts.onRead) opts.onRead(entry, data)
+        const lines = new TextDecoder('utf-8', { fatal: false }).decode(data).split('\n')
         if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop()
         const fileResults = grepLines(entry, lines, compiled, filesOnlyOpts)
         if (opts.countOnly) {
@@ -256,6 +262,7 @@ export async function grepFilesOnly(
   }
   try {
     const data = await readBytesFn(path)
+    if (opts.onRead) opts.onRead(path, data)
     const text = new TextDecoder('utf-8', { fatal: false }).decode(data)
     const lines = text.split('\n')
     if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop()
