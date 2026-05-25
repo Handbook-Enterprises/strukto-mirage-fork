@@ -531,7 +531,10 @@ export {
   formatGrepResults as slackFormatGrepResults,
   formatFileGrepResults as slackFormatFileGrepResults,
 } from './core/slack/formatters.ts'
-export { searchMessages as slackSearchMessages, searchFiles as slackSearchFiles } from './core/slack/search.ts'
+export {
+  searchMessages as slackSearchMessages,
+  searchFiles as slackSearchFiles,
+} from './core/slack/search.ts'
 export { SLACK_PROMPT, SLACK_WRITE_PROMPT } from './resource/slack/prompt.ts'
 export { DISCORD_COMMANDS } from './commands/builtin/discord/index.ts'
 export { DISCORD_VFS_OPS } from './ops/discord/index.ts'
