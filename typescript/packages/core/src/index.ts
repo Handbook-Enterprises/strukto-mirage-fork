@@ -522,6 +522,16 @@ export { read as slackRead } from './core/slack/read.ts'
 export { readdir as slackReaddir } from './core/slack/readdir.ts'
 export { stat as slackStat } from './core/slack/stat.ts'
 export { resolveSlackGlob } from './core/slack/glob.ts'
+// Slack native-search helpers — exported so ve-brain (and other callers) can
+// wrap upstream SLACK_GREP with a cache-aware version without losing the
+// native-search shortcut (label-scoped queries → slack search.* API).
+export { detectScope as slackDetectScope, type SlackScope } from './core/slack/scope.ts'
+export {
+  buildQuery as slackBuildQuery,
+  formatGrepResults as slackFormatGrepResults,
+  formatFileGrepResults as slackFormatFileGrepResults,
+} from './core/slack/formatters.ts'
+export { searchMessages as slackSearchMessages, searchFiles as slackSearchFiles } from './core/slack/search.ts'
 export { SLACK_PROMPT, SLACK_WRITE_PROMPT } from './resource/slack/prompt.ts'
 export { DISCORD_COMMANDS } from './commands/builtin/discord/index.ts'
 export { DISCORD_VFS_OPS } from './ops/discord/index.ts'
