@@ -18,7 +18,7 @@ import { IndexEntry } from '../../cache/index/config.ts'
 import { RAMIndexCacheStore } from '../../cache/index/ram.ts'
 import { PathSpec } from '../../types.ts'
 import type { SlackResponse, SlackTransport } from './_client.ts'
-import { dateRange, latestMessageTs, readdir } from './readdir.ts'
+import { dateRange, latestMessageProbeWithJoin, latestMessageTs, readdir } from './readdir.ts'
 
 interface Call {
   endpoint: string
@@ -380,5 +380,63 @@ describe('readdir channel/<id> (history dates)', () => {
     } finally {
       console.warn = orig
     }
+  })
+})
+
+describe('latestMessageProbeWithJoin', () => {
+  it('returns original probe unchanged when reason is not not_in_channel', async () => {
+    const t = new FakeTransport(() => ({ ok: true, messages: [] }))
+    const probe = await latestMessageProbeWithJoin(new SlackAccessor(t), 'C1')
+    expect(probe).toEqual({ ts: null, reason: 'empty_channel' })
+    // No conversations.join attempted — reason wasn't not_in_channel.
+    expect(t.calls.some((c) => c.endpoint === 'conversations.join')).toBe(false)
+  })
+
+  it('auto-joins on not_in_channel and retries history (public channel happy path)', async () => {
+    let historyAttempts = 0
+    const t = new FakeTransport((endpoint) => {
+      if (endpoint === 'conversations.history') {
+        historyAttempts += 1
+        if (historyAttempts === 1) {
+          throw new Error('Slack API error (conversations.history): not_in_channel')
+        }
+        // Post-join history call succeeds.
+        return { ok: true, messages: [{ ts: '1700000000.123456' }] }
+      }
+      if (endpoint === 'conversations.join') {
+        return { ok: true, channel: { id: 'C1' } }
+      }
+      return { ok: true }
+    })
+    const probe = await latestMessageProbeWithJoin(new SlackAccessor(t), 'C1')
+    expect(probe.reason).toBeNull()
+    expect(probe.ts).toBeCloseTo(1700000000.123456, 5)
+    // Sequence: history (not_in_channel) → join → history (ok)
+    const endpoints = t.calls.map((c) => c.endpoint)
+    expect(endpoints).toEqual([
+      'conversations.history',
+      'conversations.join',
+      'conversations.history',
+    ])
+  })
+
+  it('falls back to original probe when join fails (private / missing scope)', async () => {
+    const t = new FakeTransport((endpoint) => {
+      if (endpoint === 'conversations.history') {
+        throw new Error('Slack API error (conversations.history): not_in_channel')
+      }
+      if (endpoint === 'conversations.join') {
+        // Slack's response when the auth'd user can't join (private channel,
+        // missing channels:join scope, archived, etc.).
+        throw new Error(
+          'Slack API error (conversations.join): method_not_supported_for_channel_type',
+        )
+      }
+      return { ok: true }
+    })
+    const probe = await latestMessageProbeWithJoin(new SlackAccessor(t), 'CPRIV')
+    // Original not_in_channel preserved — readdir will surface this and skip
+    // caching the empty result.
+    expect(probe).toEqual({ ts: null, reason: 'not_in_channel' })
   })
 })
