@@ -334,22 +334,14 @@ describe('readdir channel/<id> (history dates)', () => {
       ],
     ])
     const t = new FakeTransport(() => ({ ok: true, messages: [] }))
-    await readdir(
-      new SlackAccessor(t),
-      spec('/mnt/slack/channels/general__C1', '/mnt/slack'),
-      idx,
-    )
+    await readdir(new SlackAccessor(t), spec('/mnt/slack/channels/general__C1', '/mnt/slack'), idx)
     const firstHistoryCalls = t.calls.filter((c) => c.endpoint === 'conversations.history').length
     expect(firstHistoryCalls).toBe(1)
     // Second readdir — must re-hit conversations.history (no cached empty
     // entry shadowing the retry). Previously: setDir cached an empty list,
     // listDir returned [], and the API was never called again until the
     // IndexCacheStore TTL expired.
-    await readdir(
-      new SlackAccessor(t),
-      spec('/mnt/slack/channels/general__C1', '/mnt/slack'),
-      idx,
-    )
+    await readdir(new SlackAccessor(t), spec('/mnt/slack/channels/general__C1', '/mnt/slack'), idx)
     const secondHistoryCalls = t.calls.filter((c) => c.endpoint === 'conversations.history').length
     expect(secondHistoryCalls).toBe(2)
   })
