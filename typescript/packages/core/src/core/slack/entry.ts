@@ -20,6 +20,13 @@ export const SlackResourceType = Object.freeze({
   USER: 'slack/user',
   DATE_DIR: 'slack/date_dir',
   CHAT_JSONL: 'slack/chat_jsonl',
+  // Sidecar in each date dir: one slack user_id per line, deduped + sorted,
+  // covering every author of a message on that day (including thread
+  // replies). Pairs with gmail/threads/.../participants.txt and calendar's
+  // attendees.txt so cross-mount `grep -l UABCDEF` queries find every place
+  // a user shows up. Resolving id→email is a separate join via
+  // /slack/users/&lt;id&gt;.
+  DATE_PARTICIPANTS: 'slack/date_participants',
   FILES_DIR: 'slack/files_dir',
   FILE: 'slack/file',
 } as const)
@@ -139,6 +146,15 @@ export const SlackIndexEntry = {
       name: 'chat.jsonl',
       resourceType: SlackResourceType.CHAT_JSONL,
       vfsName: 'chat.jsonl',
+    })
+  },
+
+  dateParticipants(channelId: string, date: string): IndexEntry {
+    return new IndexEntry({
+      id: `${channelId}:${date}:participants`,
+      name: 'participants.txt',
+      resourceType: SlackResourceType.DATE_PARTICIPANTS,
+      vfsName: 'participants.txt',
     })
   },
 

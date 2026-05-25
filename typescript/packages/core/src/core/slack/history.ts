@@ -80,6 +80,36 @@ export async function fetchMessagesForDay(
   return messages
 }
 
+/** Unique slack user_ids who authored any message (or thread reply, if
+ *  the message has `reply_users`) on the given day. Sorted, one per line.
+ *  Serves /slack/channels/&lt;ch&gt;/&lt;date&gt;/participants.txt — pairs with
+ *  gmail/threads/.../participants.txt and calendar's attendees.txt for
+ *  cross-mount `grep -l UABCDEF` queries.
+ *
+ *  Email resolution is intentionally NOT done here: it'd require a
+ *  users.info call per id and balloon the cost. Agents who want emails
+ *  do a second pass via /slack/users/&lt;id&gt;. */
+export async function getDayParticipants(
+  accessor: SlackAccessor,
+  channelId: string,
+  dateStr: string,
+): Promise<Uint8Array> {
+  const messages = await fetchMessagesForDay(accessor, channelId, dateStr)
+  const seen = new Set<string>()
+  for (const m of messages) {
+    if (typeof m.user === 'string' && m.user !== '') seen.add(m.user)
+    const replyUsers = (m as { reply_users?: unknown }).reply_users
+    if (Array.isArray(replyUsers)) {
+      for (const u of replyUsers) {
+        if (typeof u === 'string' && u !== '') seen.add(u)
+      }
+    }
+  }
+  if (seen.size === 0) return new Uint8Array(0)
+  const sorted = [...seen].sort()
+  return encoder.encode(sorted.join('\n') + '\n')
+}
+
 export async function getHistoryJsonl(
   accessor: SlackAccessor,
   channelId: string,

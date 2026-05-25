@@ -15,7 +15,7 @@
 import type { SlackAccessor } from '../../accessor/slack.ts'
 import type { IndexCacheStore } from '../../cache/index/store.ts'
 import type { PathSpec } from '../../types.ts'
-import { getHistoryJsonl } from './history.ts'
+import { getDayParticipants, getHistoryJsonl } from './history.ts'
 import { getUserProfile } from './users.ts'
 
 const encoder = new TextEncoder()
@@ -51,6 +51,24 @@ export async function read(
       throw fileNotFound(key)
     }
     return await getHistoryJsonl(accessor, lookup.entry.id, part2)
+  }
+
+  // /slack/<channels|dms>/<channel>/<date>/participants.txt — synthetic
+  // sidecar: unique slack user_ids who posted that day, one per line.
+  // Resolves channel name → channel id via the same cached IndexEntry
+  // chat.jsonl uses, then derives from the same per-day messages cursor.
+  if (
+    parts.length === 4 &&
+    (part0 === 'channels' || part0 === 'dms') &&
+    part3 === 'participants.txt'
+  ) {
+    if (index === undefined) throw fileNotFound(key)
+    const parentKey = `${prefix}/${part0}/${part1}`
+    const lookup = await index.get(parentKey)
+    if (lookup.entry === undefined || lookup.entry === null) {
+      throw fileNotFound(key)
+    }
+    return await getDayParticipants(accessor, lookup.entry.id, part2)
   }
 
   if (parts.length === 5 && (part0 === 'channels' || part0 === 'dms') && part3 === 'files') {

@@ -38,7 +38,7 @@ function p(original: string): PathSpec {
 }
 
 describe('readdir: date directory layout', () => {
-  it('readdir(<chan>/<date>) returns ["chat.jsonl", "files"] and seals via fetch_day', async () => {
+  it('readdir(<chan>/<date>) returns chat.jsonl + files + participants.txt and seals via fetch_day', async () => {
     const idx = new RAMIndexCacheStore()
     await idx.setDir(`${PREFIX}/channels`, [
       [
@@ -96,6 +96,7 @@ describe('readdir: date directory layout', () => {
     expect(out).toEqual([
       `${PREFIX}/channels/general__C1/2024-01-01/chat.jsonl`,
       `${PREFIX}/channels/general__C1/2024-01-01/files`,
+      `${PREFIX}/channels/general__C1/2024-01-01/participants.txt`,
     ])
     const filesListing = await idx.listDir(`${PREFIX}/channels/general__C1/2024-01-01/files`)
     expect(filesListing.entries).toEqual([

@@ -139,6 +139,15 @@ export async function stat(
     parts.length === 4 &&
     (part0 === 'channels' || part0 === 'dms') &&
     DATE_RE.test(part2) &&
+    part3 === 'participants.txt'
+  ) {
+    return new FileStat({ name: 'participants.txt', type: FileType.TEXT })
+  }
+
+  if (
+    parts.length === 4 &&
+    (part0 === 'channels' || part0 === 'dms') &&
+    DATE_RE.test(part2) &&
     part3 === 'files'
   ) {
     return new FileStat({ name: 'files', type: FileType.DIRECTORY })

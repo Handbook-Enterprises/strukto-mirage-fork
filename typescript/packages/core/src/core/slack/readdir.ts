@@ -340,9 +340,11 @@ async function fetchDay(
   }
   const chatEntry = SlackIndexEntry.chatJsonl(channelId, dateStr)
   const filesEntry = SlackIndexEntry.filesDir(channelId, dateStr)
+  const participantsEntry = SlackIndexEntry.dateParticipants(channelId, dateStr)
   await index.setDir(dateVirtualKey, [
     ['chat.jsonl', chatEntry],
     ['files', filesEntry],
+    ['participants.txt', participantsEntry],
   ])
   const fileEntries: [string, IndexEntry][] = []
   for (const msg of messages) {
