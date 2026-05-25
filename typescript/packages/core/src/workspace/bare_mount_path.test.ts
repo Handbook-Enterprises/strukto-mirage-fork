@@ -19,7 +19,12 @@
 // routes to the default RAM cache mount which throws "not a directory".
 
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_SESSION_ID, makeWorkspace, stderrStr, stdoutStr } from './fixtures/workspace_fixture.ts'
+import {
+  DEFAULT_SESSION_ID,
+  makeWorkspace,
+  stderrStr,
+  stdoutStr,
+} from './fixtures/workspace_fixture.ts'
 
 describe('bare mount-root args when cwd=/ has no mount', () => {
   it('ls <mount> resolves the same as ls /<mount>', async () => {
