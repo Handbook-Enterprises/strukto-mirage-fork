@@ -21,6 +21,14 @@ export interface GmailScope {
   resourcePath: string
 }
 
+// The synthetic /threads/ subtree is NOT label-scoped — its first path
+// segment is the literal string "threads", not a Gmail label id. Routing
+// any path under it to messages.search with labelName="threads" returns
+// empty (no such label). Force every threads path through the file-walk
+// rg path so the synthetic IndexEntry resourceTypes (thread_dir,
+// thread_message, thread_participants, thread_meta) get exercised.
+const THREADS_NAMESPACE = 'threads'
+
 export function detectScope(path: PathSpec): GmailScope {
   const prefix = path.prefix || ''
 
@@ -31,7 +39,7 @@ export function detectScope(path: PathSpec): GmailScope {
       dirKey = dirKey.slice(trimmedPrefix.length + 1)
     }
     const parts = dirKey === '' ? [] : dirKey.split('/')
-    if (parts.length === 2) {
+    if (parts.length === 2 && parts[0] !== THREADS_NAMESPACE) {
       return {
         useNative: true,
         labelName: parts[0] ?? null,
@@ -47,6 +55,14 @@ export function detectScope(path: PathSpec): GmailScope {
   }
 
   const parts = key.split('/')
+  if (parts[0] === THREADS_NAMESPACE) {
+    return {
+      useNative: false,
+      labelName: null,
+      dateStr: null,
+      resourcePath: key,
+    }
+  }
   if (parts.length === 1) {
     return {
       useNative: true,
