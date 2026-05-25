@@ -48,6 +48,9 @@ export interface RgFilterOptions {
   fileType: string | null
   globPattern: string | null
   hidden: boolean
+  /** Optional glob that, when set, makes any matching basename get skipped.
+   *  Mirrors grep's `--exclude` and rg's `--exclude`. */
+  excludePattern?: string | null
 }
 
 function basename(path: string): string {
@@ -69,6 +72,7 @@ export function rgMatchesFilter(
   fileType: string | null,
   globPattern: string | null,
   hidden: boolean,
+  excludePattern: string | null = null,
 ): boolean {
   const base = basename(entry)
   if (!hidden && base.startsWith('.')) return false
@@ -77,6 +81,7 @@ export function rgMatchesFilter(
     if (!exts.some((ext) => entry.endsWith(ext))) return false
   }
   if (globPattern !== null && !fnmatch(base, globPattern)) return false
+  if (excludePattern !== null && fnmatch(base, excludePattern)) return false
   return true
 }
 
@@ -95,6 +100,7 @@ export interface RgFullOptions {
   fileType: string | null
   globPattern: string | null
   hidden: boolean
+  excludePattern?: string | null
 }
 
 function searchFile(
@@ -166,7 +172,7 @@ export async function rgFull(
   const DEC = new TextDecoder('utf-8', { fatal: false })
 
   if (!isDir) {
-    if (!rgMatchesFilter(path, opts.fileType, opts.globPattern, opts.hidden)) return []
+    if (!rgMatchesFilter(path, opts.fileType, opts.globPattern, opts.hidden, opts.excludePattern ?? null)) return []
     let data: string[]
     try {
       const raw = await readBytesFn(path)
@@ -205,7 +211,7 @@ export async function rgFull(
       continue
     }
 
-    if (!rgMatchesFilter(entry, opts.fileType, opts.globPattern, opts.hidden)) continue
+    if (!rgMatchesFilter(entry, opts.fileType, opts.globPattern, opts.hidden, opts.excludePattern ?? null)) continue
 
     let data: string[]
     try {
@@ -242,6 +248,7 @@ export interface RgFolderFiletypeOptions {
   fileType: string | null
   globPattern: string | null
   hidden: boolean
+  excludePattern?: string | null
 }
 
 export async function rgFolderFiletype(
@@ -290,7 +297,7 @@ export async function rgFolderFiletype(
       continue
     }
 
-    if (!rgMatchesFilter(entry, opts.fileType, opts.globPattern, opts.hidden)) continue
+    if (!rgMatchesFilter(entry, opts.fileType, opts.globPattern, opts.hidden, opts.excludePattern ?? null)) continue
 
     const ext = getExtension(entry)
     const filetypeFn = ext !== null ? filetypeFns[ext] : undefined

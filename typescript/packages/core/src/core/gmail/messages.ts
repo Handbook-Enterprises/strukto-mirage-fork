@@ -82,6 +82,60 @@ export interface ListMessagesOptions {
   maxResults?: number
 }
 
+export interface GmailThreadStub {
+  id: string
+  snippet?: string
+  historyId?: string
+}
+
+interface ListThreadsResponse {
+  threads?: GmailThreadStub[]
+  nextPageToken?: string
+}
+
+export interface GmailThreadFull {
+  id?: string
+  historyId?: string
+  messages?: GmailMessageRaw[]
+}
+
+export interface ListThreadsOptions {
+  labelId?: string | null
+  query?: string | null
+  maxResults?: number
+}
+
+/** List threads (one entry per conversation) honoring optional label /
+ *  query filters. Used by the /gmail/threads/ synthetic view to enumerate
+ *  conversations without paying for full message bodies until read. */
+export async function listThreads(
+  tokenManager: TokenManager,
+  opts: ListThreadsOptions = {},
+): Promise<GmailThreadStub[]> {
+  const params: Record<string, string | number> = { maxResults: opts.maxResults ?? 50 }
+  if (opts.labelId !== undefined && opts.labelId !== null && opts.labelId !== '') {
+    params.labelIds = opts.labelId
+  }
+  if (opts.query !== undefined && opts.query !== null && opts.query !== '') {
+    params.q = opts.query
+  }
+  const url = `${GMAIL_API_BASE}/users/me/threads`
+  const data = (await googleGet(tokenManager, url, params)) as ListThreadsResponse
+  return data.threads ?? []
+}
+
+/** Fetch a thread with all its messages in chronological order (single API
+ *  call, vs N gets across messages). The returned `messages` are the same
+ *  GmailMessageRaw shape getMessageRaw returns, so existing helpers
+ *  (extractHeader, parseAddress, decodeBody) apply unchanged. */
+export async function getThreadFull(
+  tokenManager: TokenManager,
+  threadId: string,
+): Promise<GmailThreadFull> {
+  const url = `${GMAIL_API_BASE}/users/me/threads/${threadId}?format=full`
+  return (await googleGet(tokenManager, url)) as GmailThreadFull
+}
+
 export async function listMessages(
   tokenManager: TokenManager,
   opts: ListMessagesOptions = {},

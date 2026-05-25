@@ -175,11 +175,22 @@ export const BUILTIN_SPECS: Readonly<Record<string, CommandSpec>> = Object.freez
       new Option({ short: '-q' }),
       new Option({ short: '-H' }),
       new Option({ short: '-h' }),
+      // -P enables PCRE. JS RegExp already supports the common PCRE
+      // features the agent would reach for (lookahead, lookbehind, named
+      // groups, Unicode classes), so -P is a no-op acknowledgement that
+      // keeps the flag from being misclassified as a path.
+      new Option({ short: '-P' }),
       new Option({ short: '-m', valueKind: OperandKind.TEXT }),
       new Option({ short: '-A', valueKind: OperandKind.TEXT }),
       new Option({ short: '-B', valueKind: OperandKind.TEXT }),
       new Option({ short: '-C', valueKind: OperandKind.TEXT }),
       new Option({ short: '-e', valueKind: OperandKind.TEXT }),
+      // Glob to skip. `--exclude '*.test.ts'` or `--exclude AGENTS.md`.
+      new Option({ long: '--exclude', valueKind: OperandKind.TEXT }),
+      // Glob to skip directories from recursive traversal.
+      new Option({ long: '--exclude-dir', valueKind: OperandKind.TEXT }),
+      // Glob to restrict the scan to matching files.
+      new Option({ long: '--include', valueKind: OperandKind.TEXT }),
     ],
     positional: [new Operand({ kind: OperandKind.TEXT })],
     rest: new Operand({ kind: OperandKind.PATH }),
@@ -194,6 +205,12 @@ export const BUILTIN_SPECS: Readonly<Record<string, CommandSpec>> = Object.freez
       new Option({ short: '-w' }),
       new Option({ short: '-F' }),
       new Option({ short: '-o' }),
+      // -P enables PCRE. Our underlying engine is JS RegExp, which already
+      // supports the common PCRE features the agent would reach for
+      // (lookahead, lookbehind, named groups, Unicode classes). Treat -P
+      // as a no-op acknowledgement so the flag doesn't get misclassified
+      // as a path and produce a confusing "file not found" error.
+      new Option({ short: '-P' }),
       new Option({ short: '-m', valueKind: OperandKind.TEXT }),
       new Option({ short: '-A', valueKind: OperandKind.TEXT }),
       new Option({ short: '-B', valueKind: OperandKind.TEXT }),
@@ -201,6 +218,10 @@ export const BUILTIN_SPECS: Readonly<Record<string, CommandSpec>> = Object.freez
       new Option({ long: '--hidden' }),
       new Option({ long: '--type', valueKind: OperandKind.TEXT }),
       new Option({ long: '--glob', valueKind: OperandKind.TEXT }),
+      // Glob pattern for files/dirs to skip. e.g. `--exclude '*.test.ts'`
+      // or `--exclude AGENTS.md`. Honored by rg backends that use the
+      // shared rgMatchesFilter (most of them).
+      new Option({ long: '--exclude', valueKind: OperandKind.TEXT }),
     ],
     positional: [new Operand({ kind: OperandKind.TEXT })],
     rest: new Operand({ kind: OperandKind.PATH }),
