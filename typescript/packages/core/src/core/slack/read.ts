@@ -16,7 +16,7 @@ import type { SlackAccessor } from '../../accessor/slack.ts'
 import type { IndexCacheStore } from '../../cache/index/store.ts'
 import type { PathSpec } from '../../types.ts'
 import { getDayParticipants, getHistoryJsonl } from './history.ts'
-import { getUserProfile } from './users.ts'
+import { getUserProfile, getUsersTsv } from './users.ts'
 
 const encoder = new TextEncoder()
 
@@ -86,6 +86,13 @@ export async function read(
       throw new Error('slack: transport does not support file download')
     }
     return await accessor.transport.downloadFile(url)
+  }
+
+  // /slack/users.tsv — bulk user_id → name/email/is_bot resolution.
+  // Single users.list call; lets agents resolve participants.txt without
+  // one cat+jq per id.
+  if (parts.length === 1 && part0 === 'users.tsv') {
+    return await getUsersTsv(accessor)
   }
 
   if (parts.length === 2 && part0 === 'users') {

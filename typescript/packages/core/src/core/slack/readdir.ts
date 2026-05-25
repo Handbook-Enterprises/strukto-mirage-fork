@@ -166,7 +166,12 @@ function normalizePath(path: PathSpec): PathParts {
 }
 
 function readdirRoot(prefix: string): string[] {
-  return [`${prefix}/channels`, `${prefix}/dms`, `${prefix}/users`]
+  return [
+    `${prefix}/channels`,
+    `${prefix}/dms`,
+    `${prefix}/users`,
+    `${prefix}/users.tsv`,
+  ]
 }
 
 async function readdirChannels(

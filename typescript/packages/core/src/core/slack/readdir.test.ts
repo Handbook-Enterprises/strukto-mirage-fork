@@ -94,17 +94,22 @@ describe('latestMessageTs', () => {
 })
 
 describe('readdir root', () => {
-  it('returns the three virtual roots for empty key with prefix', async () => {
+  it('returns the virtual roots + users.tsv for empty key with prefix', async () => {
     const t = new FakeTransport(() => ({ ok: true }))
     const out = await readdir(new SlackAccessor(t), spec('/mnt/slack', '/mnt/slack'))
-    expect(out).toEqual(['/mnt/slack/channels', '/mnt/slack/dms', '/mnt/slack/users'])
+    expect(out).toEqual([
+      '/mnt/slack/channels',
+      '/mnt/slack/dms',
+      '/mnt/slack/users',
+      '/mnt/slack/users.tsv',
+    ])
     expect(t.calls).toHaveLength(0)
   })
 
-  it('returns the three virtual roots for empty prefix', async () => {
+  it('returns the virtual roots + users.tsv for empty prefix', async () => {
     const t = new FakeTransport(() => ({ ok: true }))
     const out = await readdir(new SlackAccessor(t), spec('/'))
-    expect(out).toEqual(['/channels', '/dms', '/users'])
+    expect(out).toEqual(['/channels', '/dms', '/users', '/users.tsv'])
   })
 })
 

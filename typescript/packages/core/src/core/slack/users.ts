@@ -63,6 +63,48 @@ export async function getUserProfile(
   return (data.user as SlackUser | undefined) ?? {}
 }
 
+/** TSV rendering of the workspace user list. One row per user:
+ *  `<user_id>\t<display_name>\t<real_name>\t<email>\t<is_bot>`
+ *
+ *  Serves /slack/users.tsv — lets agents bulk-resolve participants.txt
+ *  user_ids without one cat+jq per id. Joins map cleanly:
+ *    join -t$'\t' -1 1 -2 1 <(sort /slack/users.tsv) \
+ *                           <(sort /slack/.../participants.txt)
+ *
+ *  Header line is included so awk/csvkit users see column names. Includes
+ *  bots/deactivated users (filters off — different criteria than the
+ *  /slack/users/ dir which hides them) so participants.txt with bot
+ *  ids resolves too.
+ *
+ *  No tab/newline sanitization on display fields — slack rejects those
+ *  upstream in user-settable fields, so the TSV is well-formed by
+ *  construction. */
+export async function getUsersTsv(accessor: SlackAccessor): Promise<Uint8Array> {
+  const all: SlackUser[] = []
+  for await (const page of cursorPages<SlackUser>(
+    accessor.transport,
+    'users.list',
+    { limit: '200' },
+    'members',
+  )) {
+    all.push(...page)
+  }
+  const lines = ['user_id\tdisplay_name\treal_name\temail\tis_bot']
+  for (const u of all.sort((a, b) => (a.id ?? '').localeCompare(b.id ?? ''))) {
+    const email = u.profile?.email ?? ''
+    lines.push(
+      [
+        u.id ?? '',
+        u.name ?? '',
+        u.real_name ?? '',
+        email,
+        u.is_bot === true ? '1' : '0',
+      ].join('\t'),
+    )
+  }
+  return new TextEncoder().encode(lines.join('\n') + '\n')
+}
+
 export async function searchUsers(
   accessor: SlackAccessor,
   query: string,

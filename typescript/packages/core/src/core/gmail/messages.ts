@@ -172,18 +172,67 @@ function base64UrlDecodeToBytes(input: string): Uint8Array {
 
 const TEXT_DECODER = new TextDecoder('utf-8', { fatal: false })
 
-export function decodeBody(payload: GmailPayload | undefined): string {
+/** Strip HTML tags + decode common entities → text/plain-ish string.
+ *  Conservative on purpose: only handles tag removal, &amp;/&lt;/&gt;/&quot;/&#39;/&nbsp;,
+ *  block tags → newlines so paragraph structure survives, multiple blank
+ *  lines collapsed. Not a full sanitizer — this is a "good enough for
+ *  agents to grep/read" fallback when the email has no text/plain part
+ *  (common with marketing tools, automated notifications, anything
+ *  composed in a rich HTML editor). */
+function stripHtml(html: string): string {
+  return (
+    html
+      // <br>, <p>, </p>, <div>, </div>, headings, list items → newlines
+      // so paragraphs don't collapse into a single line.
+      .replace(/<\/?(?:br|p|div|h[1-6]|li|tr)\b[^>]*>/gi, '\n')
+      // Drop <style> and <script> blocks entirely (content is not text).
+      .replace(/<(?:style|script)\b[^>]*>[\s\S]*?<\/(?:style|script)>/gi, '')
+      // Strip all remaining tags.
+      .replace(/<[^>]+>/g, '')
+      // Common entities. &amp; last so it doesn't double-decode.
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&amp;/g, '&')
+      // Collapse 3+ blank lines.
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+  )
+}
+
+/** Recursively find a text/<kind> part anywhere in the payload tree.
+ *  decodeBody used to recurse only into nested parts but at each level
+ *  only checked text/plain — so a multipart/alternative with only an
+ *  html alternative returned empty. We now explicitly look for the
+ *  requested kind. */
+function findTextPart(
+  payload: GmailPayload | undefined,
+  kind: 'plain' | 'html',
+): string {
   if (payload === undefined) return ''
-  if (payload.mimeType === 'text/plain') {
+  if (payload.mimeType === `text/${kind}`) {
     const data = payload.body?.data ?? ''
     if (data !== '') {
       return TEXT_DECODER.decode(base64UrlDecodeToBytes(data))
     }
   }
   for (const part of payload.parts ?? []) {
-    const text = decodeBody(part)
+    const text = findTextPart(part, kind)
     if (text !== '') return text
   }
+  return ''
+}
+
+export function decodeBody(payload: GmailPayload | undefined): string {
+  const plain = findTextPart(payload, 'plain')
+  if (plain !== '') return plain
+  // HTML fallback: marketing/automated/rich-composer emails often have
+  // no text/plain part. Strip tags + decode entities so agents reading
+  // body_text see something more than the 200-char snippet.
+  const html = findTextPart(payload, 'html')
+  if (html !== '') return stripHtml(html)
   return ''
 }
 

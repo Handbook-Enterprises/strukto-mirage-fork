@@ -90,6 +90,10 @@ export async function stat(
     return new FileStat({ name, type: FileType.DIRECTORY })
   }
 
+  if (key === 'users.tsv') {
+    return new FileStat({ name: 'users.tsv', type: FileType.TEXT })
+  }
+
   const parts = key.split('/')
   const part0 = parts[0] ?? ''
   const part2 = parts[2] ?? ''
