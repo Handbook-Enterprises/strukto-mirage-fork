@@ -80,6 +80,37 @@ export async function latestMessageProbe(
   return { ts: Number.parseFloat(messages[0]?.ts ?? '0'), reason: null }
 }
 
+/**
+ * Probe + auto-join on `not_in_channel`. If the token has `channels:join`
+ * scope, this lets the platform read every PUBLIC channel without
+ * requiring a manual `/invite` per channel — first ls auto-joins, then
+ * retries history. Private channels (which `conversations.join` cannot
+ * silently enter; returns `is_private` / `method_not_supported_for_channel_type`)
+ * still need an external invite, but the original probe reason is
+ * preserved so callers can surface it.
+ *
+ * Auto-join failures are non-fatal: we return the original probe so the
+ * upstream behavior (caller sees not_in_channel, empty result) is
+ * unchanged when the join is impossible (missing scope, private channel,
+ * archived channel, kicked, etc.).
+ */
+export async function latestMessageProbeWithJoin(
+  accessor: SlackAccessor,
+  channelId: string,
+): Promise<LatestMessageProbe> {
+  const initial = await latestMessageProbe(accessor, channelId)
+  if (initial.reason !== 'not_in_channel') return initial
+  try {
+    await accessor.transport.call('conversations.join', { channel: channelId })
+  } catch {
+    // Join failed (missing_scope without channels:join, is_private, archived,
+    // restricted_action, etc.). Return original probe — caller surfaces it
+    // via console.warn, same as before.
+    return initial
+  }
+  return latestMessageProbe(accessor, channelId)
+}
+
 export function dateRange(latestTs: number, created: number, maxDays = 90): string[] {
   const endMs = Math.floor(latestTs * 1000)
   const startMs = Math.floor(created * 1000)
@@ -247,7 +278,14 @@ async function readdirChannelDates(
     return listing.entries
   }
   const created = Number.parseInt(lookup.entry.remoteTime || '0', 10) || 0
-  const probe = await latestMessageProbe(accessor, lookup.entry.id)
+  // Auto-join only makes sense for `channels` (public channel auto-join).
+  // DMs work by-definition for the auth'ing user, so a `not_in_channel`
+  // there is unrecoverable — don't bother spending an API call on a join
+  // that can't succeed.
+  const probe =
+    container === 'channels'
+      ? await latestMessageProbeWithJoin(accessor, lookup.entry.id)
+      : await latestMessageProbe(accessor, lookup.entry.id)
   const latestTs = probe.ts
   let dates: string[]
   if (latestTs !== null && latestTs !== 0 && created !== 0) {
