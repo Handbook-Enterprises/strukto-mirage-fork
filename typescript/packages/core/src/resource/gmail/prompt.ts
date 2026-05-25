@@ -13,18 +13,41 @@
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
 export const GMAIL_PROMPT = `{prefix}
-  <label>/
-    <yyyy-mm-dd>/
-      <subject>__<message-id>.gmail.json    # email JSON file (the email itself)
-      <subject>__<message-id>/              # attachments dir, only if any
-        <attachment-filename>
+  Two complementary views over the same mailbox — pick whichever fits the
+  task:
+
+  LABEL VIEW (browse by where the message lives):
+    <label>/
+      <yyyy-mm-dd>/
+        <subject>__<message-id>.gmail.json    # email JSON file (the email itself)
+        <subject>__<message-id>/              # attachments dir, only if any
+          <attachment-filename>
+    When Subject is empty (calendar invites, no-reply blasts), the
+    filename falls back to from-<sender>__<id>.gmail.json so the
+    filename is always informative.
+
+  THREAD VIEW (reconstruct a conversation):
+    threads/
+      <yyyy-mm>__<slug>__<thread-id>/
+        01-from-<sender>.gmail.json          # message 1 in the thread (oldest)
+        02-from-<sender>.gmail.json          # message 2 ...
+        participants.txt                     # one email per line, deduped
+                                             # across From/To/Cc/Bcc, sorted
+        meta.json                            # { id, historyId, messageCount }
+    Lists the user's recent INBOX threads. participants.txt enables
+    cross-mount queries — pair with calendar's per-event
+    .attendees.txt and slack's per-date participants.txt:
+      grep -l alice@x.com /gmail/threads/*/participants.txt
+      grep -l alice@x.com /calendar/<cal>/2026-05-19/*.attendees.txt
+      grep -l UABCDEF     /slack/channels/*/2026-05-19/participants.txt
 
   Email body is in the .gmail.json file. The sibling dir holds attachments
   only. Read with \`cat\`/\`head\`/\`jq\` on \`<path>.gmail.json\` (keep the suffix).
 
   Commands: cat, ls, head, tail, nl, wc, stat, find, tree, grep, rg, jq,
   basename, dirname, realpath, gws-gmail-read, gws-gmail-triage.
-  No others (no readFile, etc.).
+  No others (no readFile, etc.). Prefer rg over grep -r (rg supports
+  --exclude and -P).
 
   Path: <label>/<yyyy-mm-dd>/<subject>__<message-id>.gmail.json
     <label>       Gmail label (INBOX, SENT, DRAFT, IMPORTANT, STARRED,

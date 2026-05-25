@@ -17,16 +17,19 @@ export const SLACK_PROMPT = `{prefix}
     <channel-name>__<channel-id>/
       <yyyy-mm-dd>/
         chat.jsonl                # messages for that date
+        participants.txt          # one slack user_id per line, deduped, sorted —
+                                  # every author + thread reply_user on that day
         files/                    # attachments shared that day (may be empty)
           <name>__<F-id>.<ext>    # cat to download bytes
   dms/
     <user-name>__<dm-id>/
       <yyyy-mm-dd>/
         chat.jsonl
+        participants.txt
         files/
           <name>__<F-id>.<ext>
   users/
-    <username>__<user-id>.json    # user profile
+    <username>__<user-id>.json    # user profile (resolves user_id → name/email)
   Naming: channel/DM/user directory names are \`<display-name>__<id>\`.
   The display name keeps the original spelling from Slack; only \`/\` is
   replaced with \`∕\` (U+2215) so paths don't break. Quote names
@@ -34,7 +37,11 @@ export const SLACK_PROMPT = `{prefix}
   to discover exact entry names (they include IDs).
   Messages are JSONL; use jq to extract fields like .text, .user, .ts, .files.
   rg over files/ uses Slack's server-side file content search; works on
-  PDFs, Word docs, code snippets that Slack has indexed.`
+  PDFs, Word docs, code snippets that Slack has indexed.
+  Cross-mount queries (works alongside gmail's threads/.../participants.txt
+  and calendar's <event>.attendees.txt):
+    grep -l UABCDEF /slack/channels/*/2026-05-19/participants.txt
+    cat /slack/users/<id>.json | jq .email   # resolve a user_id to email`
 
 export const SLACK_WRITE_PROMPT = `  Write commands:
     slack-post-message <channel-path> "message"

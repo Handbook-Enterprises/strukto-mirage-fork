@@ -1,6 +1,6 @@
 {
   "name": "@viewengine/mirage-core",
-  "version": "0.1.0-viewengine.11",
+  "version": "0.1.0-viewengine.12",
   "description": "A Unified Virtual Filesystem For AI Agents",
   "keywords": [
     "bash",
