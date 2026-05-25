@@ -14,11 +14,21 @@
 
 import { normalizeFields, redactConfigWithSchema, secretStr, z } from '@viewengine/mirage-core'
 
+/** Scope this mount to a specific Drive root. See DriveRootScope in
+ *  @viewengine/mirage-core for the full type — re-imported here so
+ *  GDriveConfig consumers don't need a second import. */
+export interface GDriveRootScopeConfig {
+  type: 'my_drive' | 'shared_drive' | 'folder'
+  id?: string
+}
+
 export interface GDriveConfig {
   clientId: string
   clientSecret?: string
   refreshToken: string
   refreshFn?: (refreshToken: string) => Promise<{ accessToken: string; expiresIn: number }>
+  /** Optional. Defaults to { type: 'my_drive' }. */
+  rootScope?: GDriveRootScopeConfig
 }
 
 export interface GDriveConfigRedacted {

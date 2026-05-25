@@ -84,6 +84,13 @@ export async function listFiles(
       fields: FIELDS,
       pageSize,
       orderBy: 'modifiedTime desc',
+      // Always opt into cross-drive results. supportsAllDrives is required
+      // for any file inside a Shared Drive to resolve; includeItemsFromAllDrives
+      // makes "shared with me from a Team Drive" content visible in the
+      // default corpora=user listing. Both are safe to set unconditionally —
+      // they don't widen scope beyond what the OAuth token already permits.
+      supportsAllDrives: 'true',
+      includeItemsFromAllDrives: 'true',
     }
     if (pageToken !== null) params.pageToken = pageToken
     const url = `${DRIVE_API_BASE}/files`
@@ -125,6 +132,8 @@ export async function listAllFiles(
       orderBy: 'modifiedTime desc',
     }
     if (q !== null) params.q = q
+    params.supportsAllDrives = 'true'
+    params.includeItemsFromAllDrives = 'true'
     if (pageToken !== null) params.pageToken = pageToken
     const url = `${DRIVE_API_BASE}/files`
     const data = (await googleGet(tm, url, params)) as ListResponse
@@ -139,11 +148,14 @@ export async function getFileMetadata(tm: TokenManager, fileId: string): Promise
   const url = `${DRIVE_API_BASE}/files/${fileId}`
   const fields =
     'id,name,mimeType,size,' + 'createdTime,modifiedTime,' + 'owners,capabilities/canEdit,parents'
-  return (await googleGet(tm, url, { fields })) as DriveFile
+  // supportsAllDrives is required for getFileMetadata to resolve files
+  // that live in a Shared Drive; without it the API returns 404 for any
+  // file the user only has access to via a Shared Drive membership.
+  return (await googleGet(tm, url, { fields, supportsAllDrives: 'true' })) as DriveFile
 }
 
 export async function downloadFile(tm: TokenManager, fileId: string): Promise<Uint8Array> {
-  const url = `${DRIVE_API_BASE}/files/${fileId}?alt=media`
+  const url = `${DRIVE_API_BASE}/files/${fileId}?alt=media&supportsAllDrives=true`
   return googleGetBytes(tm, url)
 }
 
@@ -151,6 +163,34 @@ export async function* downloadFileStream(
   tm: TokenManager,
   fileId: string,
 ): AsyncIterable<Uint8Array> {
-  const url = `${DRIVE_API_BASE}/files/${fileId}?alt=media`
+  const url = `${DRIVE_API_BASE}/files/${fileId}?alt=media&supportsAllDrives=true`
   for await (const chunk of googleGetStream(tm, url)) yield chunk
+}
+
+/** List Shared Drives the user has access to. One API call, returns
+ *  basic name/id pairs — used by ve-brain's Configure UI picker so
+ *  admins can pick a Shared Drive by name instead of looking up its id
+ *  in the Drive URL. */
+export interface SharedDrive {
+  id: string
+  name: string
+}
+
+interface DrivesListResponse {
+  drives?: SharedDrive[]
+  nextPageToken?: string
+}
+
+export async function listSharedDrives(tm: TokenManager): Promise<SharedDrive[]> {
+  const out: SharedDrive[] = []
+  let pageToken: string | null = null
+  for (;;) {
+    const params: Record<string, string | number> = { pageSize: 100, fields: 'nextPageToken,drives(id,name)' }
+    if (pageToken !== null) params.pageToken = pageToken
+    const data = (await googleGet(tm, `${DRIVE_API_BASE}/drives`, params)) as DrivesListResponse
+    if (data.drives !== undefined) out.push(...data.drives)
+    pageToken = data.nextPageToken ?? null
+    if (pageToken === null) break
+  }
+  return out
 }

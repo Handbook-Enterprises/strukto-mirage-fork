@@ -766,7 +766,8 @@ export {
   sanitizeTitle as gslidesSanitizeTitle,
 } from './resource/gslides/slide_entry.ts'
 export { GoogleApiAccessor } from './accessor/google_api.ts'
-export { GDriveAccessor } from './accessor/gdrive.ts'
+export { GDriveAccessor, type DriveRootScope } from './accessor/gdrive.ts'
+export { listSharedDrives, type SharedDrive } from './core/google/drive.ts'
 export { GDRIVE_COMMANDS } from './commands/builtin/gdrive/index.ts'
 export { GDRIVE_VFS_OPS } from './ops/gdrive/index.ts'
 export {

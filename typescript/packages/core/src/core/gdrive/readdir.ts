@@ -50,7 +50,23 @@ export async function readdir(
 
   let folderId: string
   if (key === '') {
-    folderId = 'root'
+    // Mount-root listing depends on the accessor's rootScope:
+    //   my_drive    → 'root' (the user's My Drive root)
+    //   shared_drive → the driveId (also acts as the root folder id)
+    //   folder      → the configured folderId
+    const scope = accessor.rootScope
+    if (scope.type === 'my_drive') {
+      folderId = 'root'
+    } else {
+      if (scope.id === undefined || scope.id === '') {
+        const e = new Error(
+          `gdrive: rootScope.type='${scope.type}' requires a non-empty id`,
+        ) as Error & { code: string }
+        e.code = 'EINVAL'
+        throw e
+      }
+      folderId = scope.id
+    }
   } else {
     if (index === undefined) {
       const e = new Error(`ENOENT: ${path.original}`) as Error & { code: string }

@@ -55,7 +55,10 @@ export class GDriveResource implements Resource {
       refreshToken: config.refreshToken,
       ...(config.refreshFn !== undefined ? { refreshFn: config.refreshFn } : {}),
     })
-    this.accessor = new GDriveAccessor({ tokenManager: tm })
+    this.accessor = new GDriveAccessor({
+      tokenManager: tm,
+      ...(config.rootScope !== undefined ? { rootScope: config.rootScope } : {}),
+    })
     this.index = new RAMIndexCacheStore({ ttl: 86_400 })
   }
 
