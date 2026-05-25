@@ -37,10 +37,30 @@ function isSoftHistoryError(err: unknown): boolean {
   return SOFT_HISTORY_ERRORS.some((code) => msg.includes(code))
 }
 
+/**
+ * Result of probing a channel's most-recent message. `null` ts means
+ * "no signal" — either truly empty channel or a soft-error from the API
+ * (not_in_channel, missing_scope, channel_not_found, is_archived,
+ * not_authed). `reason` carries the soft-error code when applicable so
+ * callers can surface it instead of silently caching emptiness.
+ */
+export interface LatestMessageProbe {
+  ts: number | null
+  reason: string | null
+}
+
 export async function latestMessageTs(
   accessor: SlackAccessor,
   channelId: string,
 ): Promise<number | null> {
+  const probe = await latestMessageProbe(accessor, channelId)
+  return probe.ts
+}
+
+export async function latestMessageProbe(
+  accessor: SlackAccessor,
+  channelId: string,
+): Promise<LatestMessageProbe> {
   let messages: { ts?: string }[]
   try {
     const data = await accessor.transport.call('conversations.history', {
@@ -49,11 +69,15 @@ export async function latestMessageTs(
     })
     messages = (data.messages as { ts?: string }[] | undefined) ?? []
   } catch (err) {
-    if (isSoftHistoryError(err)) return null
+    if (isSoftHistoryError(err)) {
+      const msg = err instanceof Error ? err.message : String(err)
+      const code = SOFT_HISTORY_ERRORS.find((c) => msg.includes(c)) ?? msg
+      return { ts: null, reason: code }
+    }
     throw err
   }
-  if (messages.length === 0) return null
-  return Number.parseFloat(messages[0]?.ts ?? '0')
+  if (messages.length === 0) return { ts: null, reason: 'empty_channel' }
+  return { ts: Number.parseFloat(messages[0]?.ts ?? '0'), reason: null }
 }
 
 export function dateRange(latestTs: number, created: number, maxDays = 90): string[] {
@@ -223,7 +247,8 @@ async function readdirChannelDates(
     return listing.entries
   }
   const created = Number.parseInt(lookup.entry.remoteTime || '0', 10) || 0
-  const latestTs = await latestMessageTs(accessor, lookup.entry.id)
+  const probe = await latestMessageProbe(accessor, lookup.entry.id)
+  const latestTs = probe.ts
   let dates: string[]
   if (latestTs !== null && latestTs !== 0 && created !== 0) {
     dates = dateRange(latestTs, created)
@@ -238,6 +263,21 @@ async function readdirChannelDates(
     const entry = SlackIndexEntry.dateDir(lookup.entry.id, d)
     entries.push([entry.vfsName, entry])
     names.push(`${parts.prefix}/${parts.key}/${entry.vfsName}`)
+  }
+  // Don't cache empty results. If the probe came back with a soft-error
+  // reason (not_in_channel, missing_scope, etc.) or no messages, caching
+  // empty would silently hide the issue until the IndexCacheStore's TTL
+  // expires. Skipping setDir means the next ls retries — and surfaces
+  // the same problem on every call so callers can act on it via
+  // wrangler tail / debug commands. Also log the reason for visibility.
+  if (entries.length === 0) {
+    if (probe.reason !== null) {
+      // biome-ignore lint/suspicious/noConsole: workerd captures this for wrangler tail
+      console.warn(
+        `[slack readdir] empty result for ${parts.virtualKey} (channel=${lookup.entry.id}): ${probe.reason}`,
+      )
+    }
+    return names
   }
   await index.setDir(parts.virtualKey, entries)
   return names
