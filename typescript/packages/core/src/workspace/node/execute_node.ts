@@ -705,8 +705,20 @@ async function runCommandBody(
 
   let textArgs: ReadonlySet<string> | null = null
   let pathArgs: ReadonlySet<string> | null = null
+  // Spec lookup picks the cwd mount's view of the command. When cwd doesn't
+  // map to any mount (e.g. cwd='/' with no root mount registered — common
+  // when callers expose each connector under its own top-level prefix),
+  // cwdMount is null and the spec lookup returns null, so bare positional
+  // args like `notion` in `ls notion` never reach classifyBarePath and
+  // stay as strings. Result: pathScopes is empty, mountForCommand picks
+  // the default mount, and the command fails with "not a directory" on
+  // what should have been the mount path. Fall back to any mount that
+  // owns the command so the spec is found and bare names classify.
   const cwdMount = registry.mountFor(session.cwd)
-  const spec = cwdMount !== null ? cwdMount.specFor(name) : null
+  const spec =
+    cwdMount !== null
+      ? cwdMount.specFor(name)
+      : (registry.mountForCommand(name)?.specFor(name) ?? null)
   if (spec !== null) {
     const [textSet, pathSet] = classifyArgvBySpec(spec, expanded.slice(1))
     textArgs = textSet.size > 0 ? textSet : null
