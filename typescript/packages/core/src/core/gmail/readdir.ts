@@ -101,9 +101,12 @@ function parseThreadDirName(name: string): string | null {
 }
 
 /** Per-message filename inside a thread directory:
- *    01-from-alice.eml, 02-from-bob.eml ...
+ *    01-from-alice.gmail.json, 02-from-bob.gmail.json ...
  *  Sortable by index; `from-` carries the most useful single piece of
- *  context for skimming the conversation. */
+ *  context for skimming the conversation. The `.gmail.json` extension
+ *  matches the rest of the gmail mount so existing rg/grep/collectFiles
+ *  helpers pick these up; the file content IS JSON (same shape as
+ *  getMessageProcessed returns elsewhere). */
 function threadMessageFilename(index: number, msg: GmailMessageRaw): string {
   const fromRaw = extractHeader(msg.payload?.headers, 'From').trim()
   let sender = 'unknown'
@@ -113,13 +116,16 @@ function threadMessageFilename(index: number, msg: GmailMessageRaw): string {
     else if (addr.email !== '') sender = sanitize(addr.email.split('@')[0] ?? addr.email)
   }
   const idx = index.toString().padStart(2, '0')
-  return `${idx}-from-${sender}.eml`
+  return `${idx}-from-${sender}.gmail.json`
 }
 
 /** Parse a thread message filename back into its 1-based index. Returns
  *  null for participants.txt / meta.json (handled separately) or any
- *  shape we didn't produce. */
+ *  shape we didn't produce. Accepts both `.gmail.json` (current) and
+ *  `.eml` (legacy from a brief 0.1.0-viewengine.6 window) so cached
+ *  sessions don't break across the bump. */
 function parseThreadMessageFilename(name: string): number | null {
+  if (!name.endsWith('.gmail.json') && !name.endsWith('.eml')) return null
   const m = /^(\d{2,})-from-/.exec(name)
   if (m === null) return null
   const idx = Number.parseInt(m[1] ?? '', 10)
