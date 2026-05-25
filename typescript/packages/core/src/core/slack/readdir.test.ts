@@ -318,4 +318,67 @@ describe('readdir channel/<id> (history dates)', () => {
     )
     expect(out).toEqual([])
   })
+
+  it('does not cache empty dates so the next readdir retries the API', async () => {
+    const idx = new RAMIndexCacheStore()
+    await idx.setDir('/mnt/slack/channels', [
+      [
+        'general__C1',
+        new IndexEntry({
+          id: 'C1',
+          name: 'general',
+          resourceType: 'slack/channel',
+          vfsName: 'general__C1',
+          remoteTime: '0',
+        }),
+      ],
+    ])
+    const t = new FakeTransport(() => ({ ok: true, messages: [] }))
+    await readdir(new SlackAccessor(t), spec('/mnt/slack/channels/general__C1', '/mnt/slack'), idx)
+    const firstHistoryCalls = t.calls.filter((c) => c.endpoint === 'conversations.history').length
+    expect(firstHistoryCalls).toBe(1)
+    // Second readdir — must re-hit conversations.history (no cached empty
+    // entry shadowing the retry). Previously: setDir cached an empty list,
+    // listDir returned [], and the API was never called again until the
+    // IndexCacheStore TTL expired.
+    await readdir(new SlackAccessor(t), spec('/mnt/slack/channels/general__C1', '/mnt/slack'), idx)
+    const secondHistoryCalls = t.calls.filter((c) => c.endpoint === 'conversations.history').length
+    expect(secondHistoryCalls).toBe(2)
+  })
+
+  it('surfaces the soft-error reason via console.warn when readdir returns empty', async () => {
+    const warnSpy: string[] = []
+    const orig = console.warn
+    console.warn = (msg: unknown): void => {
+      warnSpy.push(String(msg))
+    }
+    try {
+      const idx = new RAMIndexCacheStore()
+      await idx.setDir('/mnt/slack/channels', [
+        [
+          'private__C2',
+          new IndexEntry({
+            id: 'C2',
+            name: 'private',
+            resourceType: 'slack/channel',
+            vfsName: 'private__C2',
+            remoteTime: '0',
+          }),
+        ],
+      ])
+      const t = new FakeTransport(() => {
+        throw new Error('Slack API error (conversations.history): not_in_channel')
+      })
+      const out = await readdir(
+        new SlackAccessor(t),
+        spec('/mnt/slack/channels/private__C2', '/mnt/slack'),
+        idx,
+      )
+      expect(out).toEqual([])
+      expect(warnSpy.some((m) => m.includes('not_in_channel'))).toBe(true)
+      expect(warnSpy.some((m) => m.includes('private__C2'))).toBe(true)
+    } finally {
+      console.warn = orig
+    }
+  })
 })
