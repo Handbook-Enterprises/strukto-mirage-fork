@@ -36,6 +36,10 @@ function fnmatch(name: string, pattern: string): boolean {
 // entries are pipeable into `ls`/`cat` and recursion's readdir hits the
 // right key.
 function joinChild(parent: PathSpec, child: string): string {
+  // Defensive: backends frequently return mount-prefixed absolute paths
+  // from readdir. Re-joining the parent in that case produced doubled
+  // paths like /box/foo//box/foo/bar.txt. Pass absolute paths through.
+  if (child.startsWith('/')) return child
   const base = parent.original.replace(/\/+$/, '')
   return base === '' || base === '/' ? '/' + child : base + '/' + child
 }

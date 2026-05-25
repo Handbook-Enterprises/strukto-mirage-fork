@@ -31,11 +31,15 @@ function fnmatch(name: string, pattern: string): boolean {
   return new RegExp(`^${re}$`).test(name)
 }
 
-// Compose a child entry into a full mount-prefixed path. gmailReaddir returns
-// bare child names (e.g. "INBOX", "2026-05-24"); the find walk needs absolute
-// paths so output entries are pipeable into `ls`/`cat` and recursion's
-// readdir call hits the right index/API key.
-function joinChild(parent: PathSpec, child: string): string {
+// Normalize a readdir entry into a full mount-prefixed path. gmailReaddir
+// returns absolute, prefix-included paths (e.g. "/gmail/INBOX",
+// "/gmail/INBOX/2026-05-24") — NOT bare child names as an earlier version
+// of this code assumed. The old joinChild() prepended the parent again,
+// producing doubled paths like `/gmail/INBOX/2026-05-25//gmail/INBOX/2026-05-25/foo`.
+// If a backend ever does return a bare name, join against the parent;
+// otherwise pass through unchanged.
+function resolveChild(parent: PathSpec, child: string): string {
+  if (child.startsWith('/')) return child
   const base = parent.original.replace(/\/+$/, '')
   return base === '' || base === '/' ? '/' + child : base + '/' + child
 }
@@ -58,7 +62,7 @@ async function walk(
   for (const child of children) {
     const isFolder = child.endsWith('/')
     const trimmed = isFolder ? child.replace(/\/+$/, '') : child
-    const childFullPath = joinChild(path, trimmed)
+    const childFullPath = resolveChild(path, trimmed)
     results.push(childFullPath)
     if (isFolder) {
       const childSpec = new PathSpec({
