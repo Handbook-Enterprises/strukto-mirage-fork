@@ -207,10 +207,7 @@ function stripHtml(html: string): string {
  *  only checked text/plain — so a multipart/alternative with only an
  *  html alternative returned empty. We now explicitly look for the
  *  requested kind. */
-function findTextPart(
-  payload: GmailPayload | undefined,
-  kind: 'plain' | 'html',
-): string {
+function findTextPart(payload: GmailPayload | undefined, kind: 'plain' | 'html'): string {
   if (payload === undefined) return ''
   if (payload.mimeType === `text/${kind}`) {
     const data = payload.body?.data ?? ''

@@ -172,7 +172,16 @@ export async function rgFull(
   const DEC = new TextDecoder('utf-8', { fatal: false })
 
   if (!isDir) {
-    if (!rgMatchesFilter(path, opts.fileType, opts.globPattern, opts.hidden, opts.excludePattern ?? null)) return []
+    if (
+      !rgMatchesFilter(
+        path,
+        opts.fileType,
+        opts.globPattern,
+        opts.hidden,
+        opts.excludePattern ?? null,
+      )
+    )
+      return []
     let data: string[]
     try {
       const raw = await readBytesFn(path)
@@ -211,7 +220,16 @@ export async function rgFull(
       continue
     }
 
-    if (!rgMatchesFilter(entry, opts.fileType, opts.globPattern, opts.hidden, opts.excludePattern ?? null)) continue
+    if (
+      !rgMatchesFilter(
+        entry,
+        opts.fileType,
+        opts.globPattern,
+        opts.hidden,
+        opts.excludePattern ?? null,
+      )
+    )
+      continue
 
     let data: string[]
     try {
@@ -297,7 +315,16 @@ export async function rgFolderFiletype(
       continue
     }
 
-    if (!rgMatchesFilter(entry, opts.fileType, opts.globPattern, opts.hidden, opts.excludePattern ?? null)) continue
+    if (
+      !rgMatchesFilter(
+        entry,
+        opts.fileType,
+        opts.globPattern,
+        opts.hidden,
+        opts.excludePattern ?? null,
+      )
+    )
+      continue
 
     const ext = getExtension(entry)
     const filetypeFn = ext !== null ? filetypeFns[ext] : undefined
