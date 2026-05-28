@@ -90,16 +90,10 @@ export async function getUsersTsv(accessor: SlackAccessor): Promise<Uint8Array> 
     all.push(...page)
   }
   const lines = ['user_id\tdisplay_name\treal_name\temail\tis_bot']
-  for (const u of all.sort((a, b) => (a.id ?? '').localeCompare(b.id ?? ''))) {
+  for (const u of all.sort((a, b) => a.id.localeCompare(b.id))) {
     const email = u.profile?.email ?? ''
     lines.push(
-      [
-        u.id ?? '',
-        u.name ?? '',
-        u.real_name ?? '',
-        email,
-        u.is_bot === true ? '1' : '0',
-      ].join('\t'),
+      [u.id, u.name ?? '', u.real_name ?? '', email, u.is_bot === true ? '1' : '0'].join('\t'),
     )
   }
   return new TextEncoder().encode(lines.join('\n') + '\n')

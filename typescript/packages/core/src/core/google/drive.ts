@@ -185,7 +185,10 @@ export async function listSharedDrives(tm: TokenManager): Promise<SharedDrive[]>
   const out: SharedDrive[] = []
   let pageToken: string | null = null
   for (;;) {
-    const params: Record<string, string | number> = { pageSize: 100, fields: 'nextPageToken,drives(id,name)' }
+    const params: Record<string, string | number> = {
+      pageSize: 100,
+      fields: 'nextPageToken,drives(id,name)',
+    }
     if (pageToken !== null) params.pageToken = pageToken
     const data = (await googleGet(tm, `${DRIVE_API_BASE}/drives`, params)) as DrivesListResponse
     if (data.drives !== undefined) out.push(...data.drives)
