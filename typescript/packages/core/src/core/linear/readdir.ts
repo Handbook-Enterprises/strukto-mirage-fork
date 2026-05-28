@@ -77,9 +77,7 @@ async function ensureLookup(
   return { id: lookup.entry.id }
 }
 
-export async function readdir(
-  ...args: Parameters<typeof readdirImpl>
-): Promise<string[]> {
+export async function readdir(...args: Parameters<typeof readdirImpl>): Promise<string[]> {
   const out = await readdirImpl(...args)
   const p = args[1] as { prefix?: string } | string | undefined
   const prefix = typeof p === 'string' || p == null ? '' : (p.prefix ?? '')

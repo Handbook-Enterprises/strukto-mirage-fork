@@ -19,9 +19,7 @@ import type { S3Accessor } from '../../accessor/s3.ts'
 import { createS3Client, loadS3Module, s3Prefix } from './_client.ts'
 import { S3IndexEntry } from './entry.ts'
 
-export async function readdir(
-  ...args: Parameters<typeof readdirImpl>
-): Promise<string[]> {
+export async function readdir(...args: Parameters<typeof readdirImpl>): Promise<string[]> {
   const out = await readdirImpl(...args)
   const p = args[1] as { prefix?: string } | string | undefined
   const prefix = typeof p === 'string' || p == null ? '' : (p.prefix ?? '')

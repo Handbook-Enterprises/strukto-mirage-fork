@@ -20,9 +20,7 @@ import type { PostgresAccessor } from '../../accessor/postgres.ts'
 import { listMatviews, listSchemas, listTables, listViews } from './_client.ts'
 import { detectScope } from './scope.ts'
 
-export async function readdir(
-  ...args: Parameters<typeof readdirImpl>
-): Promise<string[]> {
+export async function readdir(...args: Parameters<typeof readdirImpl>): Promise<string[]> {
   const out = await readdirImpl(...args)
   const p = args[1] as { prefix?: string } | string | undefined
   const prefix = typeof p === 'string' || p == null ? '' : (p.prefix ?? '')

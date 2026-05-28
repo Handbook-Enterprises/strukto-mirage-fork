@@ -23,9 +23,7 @@ import { makeFilename } from '../../resource/gsheets/sheet_entry.ts'
 
 const MIME = 'application/vnd.google-apps.spreadsheet'
 
-export async function readdir(
-  ...args: Parameters<typeof readdirImpl>
-): Promise<string[]> {
+export async function readdir(...args: Parameters<typeof readdirImpl>): Promise<string[]> {
   const out = await readdirImpl(...args)
   const p = args[1] as { prefix?: string } | string | undefined
   const prefix = typeof p === 'string' || p == null ? '' : (p.prefix ?? '')
