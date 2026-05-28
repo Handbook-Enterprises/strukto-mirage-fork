@@ -12,6 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
+import { applyMountFilter } from '../../utils/mount_filter.ts'
 import type { GSheetsAccessor } from '../../accessor/gsheets.ts'
 import { IndexEntry } from '../../cache/index/config.ts'
 import type { IndexCacheStore } from '../../cache/index/store.ts'
@@ -22,7 +23,14 @@ import { makeFilename } from '../../resource/gsheets/sheet_entry.ts'
 
 const MIME = 'application/vnd.google-apps.spreadsheet'
 
-export async function readdir(
+export async function readdir(...args: Parameters<typeof readdirImpl>): Promise<string[]> {
+  const out = await readdirImpl(...args)
+  const p = args[1] as { prefix?: string } | string | undefined
+  const prefix = typeof p === 'string' || p == null ? '' : (p.prefix ?? '')
+  return applyMountFilter(out, prefix)
+}
+
+async function readdirImpl(
   accessor: GSheetsAccessor,
   path: PathSpec,
   index?: IndexCacheStore,

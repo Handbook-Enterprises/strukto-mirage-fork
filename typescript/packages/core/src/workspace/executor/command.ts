@@ -33,6 +33,7 @@ import type { DispatchFn } from './cross_mount.ts'
 import { handleCrossMount, isCrossMount } from './cross_mount.ts'
 import type { ExecuteNodeFn } from './jobs.ts'
 import { handleJobs, handleKill, handlePs, handleWait } from './jobs.ts'
+import { isPathVisible } from '../../utils/mount_filter.ts'
 
 const JOB_BUILTINS: ReadonlySet<string> = new Set(['wait', 'fg', 'kill', 'jobs', 'ps'])
 
@@ -168,6 +169,26 @@ export async function handleCommand(
   }
 
   const [paths, texts, flagKwargs] = parseFlags(parts.slice(1), mount, cmdName, session.cwd)
+
+  // Mount path-glob guard: deny direct access to an excluded path. Listings
+  // are filtered separately at the readdir layer (Mount.executeCmd sets the
+  // filter context); this blocks a command that names an excluded path
+  // outright (e.g. `cat /slack/dms/x` -> ENOENT) so excluded paths are not
+  // merely hidden but inaccessible. The mount root and allowed paths pass.
+  if (mount.filter !== null) {
+    for (const p of paths) {
+      if (!isPathVisible(p.original, mount.filter)) {
+        const errBytes = new TextEncoder().encode(
+          `${cmdName}: ${p.original}: No such file or directory\n`,
+        )
+        return [
+          null,
+          new IOResult({ exitCode: 1, stderr: errBytes }),
+          new ExecutionNode({ command: cmdStr, stderr: errBytes, exitCode: 1 }),
+        ]
+      }
+    }
+  }
 
   if (ensureOpen !== undefined) {
     await ensureOpen(mount.resource)

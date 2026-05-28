@@ -44,6 +44,11 @@ describe('ops/slack/readdir', () => {
       [],
       {},
     )
-    expect(out).toEqual(['/mnt/slack/channels', '/mnt/slack/dms', '/mnt/slack/users'])
+    expect(out).toEqual([
+      '/mnt/slack/channels',
+      '/mnt/slack/dms',
+      '/mnt/slack/users',
+      '/mnt/slack/users.tsv',
+    ])
   })
 })

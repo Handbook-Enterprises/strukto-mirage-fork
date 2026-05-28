@@ -75,7 +75,7 @@ describe('slack ls', () => {
       {},
       { index: idx },
     )
-    expect(out.stdout.split('\n').sort()).toEqual(['channels', 'dms', 'users'])
+    expect(out.stdout.split('\n').sort()).toEqual(['channels', 'dms', 'users', 'users.tsv'])
   })
 
   it('lists channel directory entries from cached index', async () => {

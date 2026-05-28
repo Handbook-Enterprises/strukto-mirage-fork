@@ -12,6 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
+import { applyMountFilter } from '../../utils/mount_filter.ts'
 import { IndexEntry } from '../../cache/index/config.ts'
 import type { IndexCacheStore } from '../../cache/index/store.ts'
 import type { PathSpec } from '../../types.ts'
@@ -40,7 +41,14 @@ function makeVirtualKey(prefix: string, key: string): string {
   return `${prefix}/${key}`
 }
 
-export async function readdir(
+export async function readdir(...args: Parameters<typeof readdirImpl>): Promise<string[]> {
+  const out = await readdirImpl(...args)
+  const p = args[1] as { prefix?: string } | string | undefined
+  const prefix = typeof p === 'string' || p == null ? '' : (p.prefix ?? '')
+  return applyMountFilter(out, prefix)
+}
+
+async function readdirImpl(
   accessor: NotionReaddirAccessor,
   path: PathSpec,
   index?: IndexCacheStore,
