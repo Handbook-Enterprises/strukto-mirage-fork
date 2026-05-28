@@ -12,6 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
+import { applyMountFilter } from '../../utils/mount_filter.ts'
 import type { DropboxAccessor } from '../../accessor/dropbox.ts'
 import { IndexEntry } from '../../cache/index/config.ts'
 import type { IndexCacheStore } from '../../cache/index/store.ts'
@@ -29,6 +30,15 @@ function dropboxPathFromKey(key: string): string {
 }
 
 export async function readdir(
+  ...args: Parameters<typeof readdirImpl>
+): Promise<string[]> {
+  const out = await readdirImpl(...args)
+  const p = args[1] as { prefix?: string } | string | undefined
+  const prefix = typeof p === 'string' || p == null ? '' : (p.prefix ?? '')
+  return applyMountFilter(out, prefix)
+}
+
+async function readdirImpl(
   accessor: DropboxAccessor,
   path: PathSpec,
   index?: IndexCacheStore,

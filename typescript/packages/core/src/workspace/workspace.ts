@@ -55,7 +55,7 @@ import type { DispatchFn } from './executor/cross_mount.ts'
 import type { ProvisionResult } from '../provision/types.ts'
 import { WorkspaceFS } from './fs.ts'
 import type { Mount } from './mount/mount.ts'
-import { MountRegistry } from './mount/registry.ts'
+import { type MountFilterConfig, MountRegistry } from './mount/registry.ts'
 import { handlePythonRepl } from './executor/python/handle.ts'
 import type { BridgeDispatchFn, MirageEntry } from './executor/python/mirage_bridge.ts'
 import { PyodideRuntime } from './executor/python/runtime.ts'
@@ -131,6 +131,13 @@ const VALID_MODES: readonly string[] = [MountMode.READ, MountMode.WRITE, MountMo
 export interface WorkspaceOptions {
   mode?: MountMode
   modeOverrides?: Record<string, MountMode>
+  /**
+   * Per-mount path-glob visibility filters, keyed by mount prefix (same
+   * keying as `modeOverrides`). A mount with `excludeGlobs`/`includeGlobs`
+   * hides matching paths from listings and denies direct access to them.
+   * See utils/mount_filter.ts.
+   */
+  mountFilters?: Record<string, MountFilterConfig>
   /**
    * Behaviour for the post-load drift check on fingerprinted reads. Only
    * consulted by {@link Workspace.load} / {@link Workspace.fromState};
@@ -267,10 +274,15 @@ export class Workspace {
     const observerPrefix = options.observerPrefix ?? '/.sessions'
     this.observer = new Observer(observerResource, observerPrefix)
     const withObserver = { ...resources, [observerPrefix]: observerResource }
-    this.registry = new MountRegistry(withObserver, options.mode ?? MountMode.READ, {
-      ...(options.modeOverrides ?? {}),
-      [observerPrefix]: MountMode.READ,
-    })
+    this.registry = new MountRegistry(
+      withObserver,
+      options.mode ?? MountMode.READ,
+      {
+        ...(options.modeOverrides ?? {}),
+        [observerPrefix]: MountMode.READ,
+      },
+      options.mountFilters ?? {},
+    )
     if (options.index !== undefined) {
       for (const resource of Object.values(resources)) {
         resource.setIndex?.(options.index)

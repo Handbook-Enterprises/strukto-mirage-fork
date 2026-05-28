@@ -28,6 +28,11 @@ import type { CommandSpec } from '../../commands/spec/types.ts'
 import type { ByteSource } from '../../io/types.ts'
 import { IOResult } from '../../io/types.ts'
 import { runWithRevisions, setVirtualPrefix } from '../../observe/context.ts'
+import {
+  type CompiledMountFilter,
+  compileMountFilter,
+  runWithMountFilter,
+} from '../../utils/mount_filter.ts'
 import type { RegisteredOp } from '../../ops/registry.ts'
 import type { Resource } from '../../resource/base.ts'
 import { ConsistencyPolicy, MountMode, PathSpec } from '../../types.ts'
@@ -57,6 +62,15 @@ export interface MountInit {
   resource: Resource
   mode?: MountMode
   consistency?: ConsistencyPolicy
+  /**
+   * Path-glob visibility filter. Patterns match the mount-relative path
+   * (no leading slash, no mount prefix). `includeGlobs` is an allowlist
+   * (empty = allow all); `excludeGlobs` is a denylist that wins. Excluded
+   * paths are hidden from listings (readdir hook) and denied on direct
+   * access (executor guard). See utils/mount_filter.ts.
+   */
+  includeGlobs?: readonly string[]
+  excludeGlobs?: readonly string[]
 }
 
 export class Mount {
@@ -64,6 +78,8 @@ export class Mount {
   readonly resource: Resource
   readonly mode: MountMode
   readonly consistency: ConsistencyPolicy
+  /** Precompiled include/exclude filter, or null when the mount has none. */
+  readonly filter: CompiledMountFilter | null
 
   /**
    * Per-path revision pins installed at Workspace.load time. Read
@@ -96,6 +112,7 @@ export class Mount {
     this.resource = init.resource
     this.mode = init.mode ?? MountMode.READ
     this.consistency = init.consistency ?? ConsistencyPolicy.LAZY
+    this.filter = compileMountFilter(prefix, init.includeGlobs, init.excludeGlobs)
   }
 
   // ── command registration ──────────────────────────
@@ -376,26 +393,33 @@ export class Mount {
 
     setVirtualPrefix(mountPrefix)
     try {
-      return await runWithRevisions(
-        this.revisions.size > 0 ? this.revisions : null,
-        async (): Promise<[ByteSource | null, IOResult]> => {
-          for (const cmd of handlers) {
-            if (cmd.write && this.mode === MountMode.READ) {
-              return [
-                null,
-                new IOResult({
-                  exitCode: 1,
-                  stderr: new TextEncoder().encode(`${cmdName}: read-only mount at ${this.prefix}`),
-                }),
-              ]
+      // Run inside the mount's path-glob filter context so readdir helpers
+      // (ls / find / grep -r / tree all enumerate through them) hide
+      // excluded entries. No-op when this.filter is null.
+      return await runWithMountFilter(this.filter, () =>
+        runWithRevisions(
+          this.revisions.size > 0 ? this.revisions : null,
+          async (): Promise<[ByteSource | null, IOResult]> => {
+            for (const cmd of handlers) {
+              if (cmd.write && this.mode === MountMode.READ) {
+                return [
+                  null,
+                  new IOResult({
+                    exitCode: 1,
+                    stderr: new TextEncoder().encode(
+                      `${cmdName}: read-only mount at ${this.prefix}`,
+                    ),
+                  }),
+                ]
+              }
+              const result = await cmd.fn(accessor, expandedPaths, texts, cmdOpts)
+              if (result !== null) {
+                return result
+              }
             }
-            const result = await cmd.fn(accessor, expandedPaths, texts, cmdOpts)
-            if (result !== null) {
-              return result
-            }
-          }
-          return [null, new IOResult()]
-        },
+            return [null, new IOResult()]
+          },
+        ),
       )
     } finally {
       setVirtualPrefix('')

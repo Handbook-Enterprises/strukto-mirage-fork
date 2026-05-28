@@ -12,6 +12,7 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
+import { applyMountFilter } from '../../utils/mount_filter.ts'
 import type { RAMAccessor } from '../../accessor/ram.ts'
 import { IndexEntry, type IndexCacheStore } from '../../cache/index/index.ts'
 import { ResourceType } from '../../cache/index/config.ts'
@@ -19,6 +20,15 @@ import type { PathSpec } from '../../types.ts'
 import { norm } from './utils.ts'
 
 export async function readdir(
+  ...args: Parameters<typeof readdirImpl>
+): Promise<string[]> {
+  const out = await readdirImpl(...args)
+  const p = args[1] as { prefix?: string } | string | undefined
+  const prefix = typeof p === 'string' || p == null ? '' : (p.prefix ?? '')
+  return applyMountFilter(out, prefix)
+}
+
+async function readdirImpl(
   accessor: RAMAccessor,
   path: PathSpec,
   index?: IndexCacheStore,

@@ -21,6 +21,12 @@ import { Mount } from './mount.ts'
 
 export const DEV_PREFIX = '/dev/'
 
+/** Per-mount path-glob visibility config, keyed by mount prefix. */
+export interface MountFilterConfig {
+  includeGlobs?: readonly string[]
+  excludeGlobs?: readonly string[]
+}
+
 function isFileCache(resource: Resource): resource is Resource & FileCache {
   const r = resource as Partial<FileCache>
   return (
@@ -44,6 +50,7 @@ export class MountRegistry {
     resources: Record<string, Resource>,
     defaultMode: MountMode,
     modeOverrides: Record<string, MountMode> = {},
+    mountFilters: Record<string, MountFilterConfig> = {},
   ) {
     this.defaultMode = defaultMode
     const mounts: Mount[] = []
@@ -51,6 +58,10 @@ export class MountRegistry {
     const overrides: Record<string, MountMode> = {}
     for (const [k, v] of Object.entries(modeOverrides)) {
       overrides[normalizePrefix(k)] = v
+    }
+    const filters: Record<string, MountFilterConfig> = {}
+    for (const [k, v] of Object.entries(mountFilters)) {
+      filters[normalizePrefix(k)] = v
     }
     mounts.push(
       new Mount({ prefix: DEV_PREFIX, resource: new DevResource(), mode: MountMode.WRITE }),
@@ -63,7 +74,16 @@ export class MountRegistry {
       }
       seen.add(prefix)
       const mode = overrides[prefix] ?? defaultMode
-      mounts.push(new Mount({ prefix, resource, mode }))
+      const f = filters[prefix]
+      mounts.push(
+        new Mount({
+          prefix,
+          resource,
+          mode,
+          ...(f?.includeGlobs !== undefined ? { includeGlobs: f.includeGlobs } : {}),
+          ...(f?.excludeGlobs !== undefined ? { excludeGlobs: f.excludeGlobs } : {}),
+        }),
+      )
     }
     mounts.sort((a, b) => b.prefix.length - a.prefix.length)
     this.mountList = mounts
