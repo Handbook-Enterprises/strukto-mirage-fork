@@ -91,9 +91,17 @@ describe('isVisible', () => {
   })
 })
 
+// Compile and assert non-null (every caller here supplies a glob, so the
+// result is never null — but avoid the `!` non-null assertion for lint).
+function mustCompile(prefix: string, inc: string[], exc: string[]) {
+  const f = compileMountFilter(prefix, inc, exc)
+  if (f === null) throw new Error('expected a non-null filter')
+  return f
+}
+
 describe('isPathVisible (full path -> mount-relative)', () => {
   it('relativises against the mount prefix', () => {
-    const filter = compileMountFilter('/slack', [], ['dms/**'])!
+    const filter = mustCompile('/slack', [], ['dms/**'])
     expect(isPathVisible('/slack/dms/alex', filter)).toBe(false)
     expect(isPathVisible('/slack/channels/general', filter)).toBe(true)
     expect(isPathVisible('/slack', filter)).toBe(true) // mount root
@@ -107,25 +115,27 @@ describe('applyMountFilter (readdir hook)', () => {
     expect(applyMountFilter(entries, '/slack')).toEqual(entries)
   })
 
-  it('drops excluded entries inside runWithMountFilter for the matching prefix', async () => {
-    const filter = compileMountFilter('/slack', [], ['dms/**'])!
-    await runWithMountFilter(filter, async () => {
+  it('drops excluded entries inside runWithMountFilter for the matching prefix', () => {
+    const filter = mustCompile('/slack', [], ['dms/**'])
+    // Sync callback: runs synchronously, so the assertion fires before
+    // runWithMountFilter returns. `void` discards the (sync) return value.
+    void runWithMountFilter(filter, () => {
       const out = applyMountFilter(['/slack/channels', '/slack/dms', '/slack/users.tsv'], '/slack')
       expect(out).toEqual(['/slack/channels', '/slack/users.tsv'])
     })
   })
 
-  it('does not filter a different mount prefix (cross-mount safety)', async () => {
-    const filter = compileMountFilter('/slack', [], ['dms/**'])!
-    await runWithMountFilter(filter, async () => {
+  it('does not filter a different mount prefix (cross-mount safety)', () => {
+    const filter = mustCompile('/slack', [], ['dms/**'])
+    void runWithMountFilter(filter, () => {
       const entries = ['/gdrive/dms', '/gdrive/x']
       expect(applyMountFilter(entries, '/gdrive')).toEqual(entries)
     })
   })
 
-  it('restores no-filter after the context exits', async () => {
-    const filter = compileMountFilter('/slack', [], ['dms/**'])!
-    await runWithMountFilter(filter, async () => {})
+  it('restores no-filter after the context exits', () => {
+    const filter = mustCompile('/slack', [], ['dms/**'])
+    void runWithMountFilter(filter, () => undefined)
     expect(applyMountFilter(['/slack/dms'], '/slack')).toEqual(['/slack/dms'])
   })
 })

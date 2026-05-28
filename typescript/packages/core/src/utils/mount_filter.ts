@@ -57,24 +57,26 @@ export interface CompiledMountFilter {
 }
 
 // Convert one glob to a regex anchored to a full mount-relative path.
+// Uses charAt (always returns a string) so the scanner never deals with
+// `string | undefined`.
 function globToRegex(glob: string): RegExp {
   let out = ''
   let i = 0
   while (i < glob.length) {
-    const c = glob[i]
+    const c = glob.charAt(i)
     // `/**` (end, or before another `/`) => optional subtree: matches the
     // directory entry itself AND everything beneath it.
-    if (c === '/' && glob[i + 1] === '*' && glob[i + 2] === '*') {
+    if (c === '/' && glob.charAt(i + 1) === '*' && glob.charAt(i + 2) === '*') {
       out += '(?:/.*)?'
       i += 3
-      if (glob[i] === '/') i += 1
+      if (glob.charAt(i) === '/') i += 1
       continue
     }
     if (c === '*') {
-      if (glob[i + 1] === '*') {
+      if (glob.charAt(i + 1) === '*') {
         out += '.*'
         i += 2
-        if (glob[i] === '/') i += 1
+        if (glob.charAt(i) === '/') i += 1
         continue
       }
       out += '[^/]*'
@@ -86,7 +88,7 @@ function globToRegex(glob: string): RegExp {
       i += 1
       continue
     }
-    if (c !== undefined && /[\\^$+.()|[\]{}]/.test(c)) {
+    if (/[\\^$+.()|[\]{}]/.test(c)) {
       out += `\\${c}`
       i += 1
       continue
