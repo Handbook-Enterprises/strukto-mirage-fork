@@ -774,7 +774,7 @@ async function runCommandBody(
 
   if (name === SB.EVAL) return handleEval(executeFn, finalExpanded.slice(1), session)
   if (name === SB.BASH || name === SB.SH) {
-    return handleBash(executeFn, finalExpanded.slice(1), session, stdin)
+    return handleBash(dispatch, executeFn, finalExpanded.slice(1), session, stdin)
   }
   if (name === SB.EXPORT) return handleExport(finalExpanded.slice(1), session)
   if (name === SB.UNSET) return handleUnset(finalExpanded.slice(1), session)

@@ -749,7 +749,7 @@ async def _dispatch_command_body(
 
     if name in (SB.BASH, SB.SH):
         args = expanded[1:]
-        return await handle_bash(execute_fn, args, session, stdin)
+        return await handle_bash(dispatch, execute_fn, args, session, stdin)
 
     if name == SB.EXPORT:
         assignments = expanded[1:]

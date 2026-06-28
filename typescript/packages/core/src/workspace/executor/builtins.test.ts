@@ -24,6 +24,7 @@ import type { Mount } from '../mount/mount.ts'
 import { Session } from '../session/session.ts'
 import type { DispatchFn } from './cross_mount.ts'
 import {
+  handleBash,
   handleCd,
   handleEcho,
   handleEval,
@@ -439,6 +440,65 @@ describe('handleSource', () => {
     expect(io.exitCode).toBe(1)
     expect(decode(io.stderr instanceof Uint8Array ? io.stderr : null)).toMatch(/missing.sh/)
     expect(executeFn).not.toHaveBeenCalled()
+  })
+})
+
+describe('handleBash', () => {
+  it('-c runs the inline script string (no read dispatched)', async () => {
+    const s = new Session({ sessionId: 'test', cwd: '/' })
+    const dispatch = vi.fn() as unknown as DispatchFn
+    let executed = ''
+    const executeFn = vi.fn((script: string) => {
+      executed = script
+      return Promise.resolve(new IOResult())
+    })
+    const [, io] = await handleBash(dispatch, executeFn, ['-c', 'echo hi'], s)
+    expect(io.exitCode).toBe(0)
+    expect(executed).toBe('echo hi')
+    expect(dispatch).not.toHaveBeenCalled()
+  })
+
+  it('a positional FILE arg is read from the VFS and its contents run', async () => {
+    const s = new Session({ sessionId: 'test', cwd: '/' })
+    const dispatch = vi.fn(() => {
+      const data = new TextEncoder().encode("echo 'from file'\n")
+      return Promise.resolve([data, new IOResult()] as [Uint8Array, IOResult])
+    }) as unknown as DispatchFn
+    let executed = ''
+    const executeFn = vi.fn((script: string) => {
+      executed = script
+      return Promise.resolve(new IOResult())
+    })
+    const [, io] = await handleBash(dispatch, executeFn, ['/disk/test.sh'], s)
+    expect(io.exitCode).toBe(0)
+    // The file's contents are executed — NOT the path as a command.
+    expect(executed).toBe("echo 'from file'\n")
+    expect(dispatch).toHaveBeenCalled()
+  })
+
+  it('returns exit 127 with stderr when the script file cannot be read', async () => {
+    const s = new Session({ sessionId: 'test', cwd: '/' })
+    const dispatch = vi.fn(() => Promise.reject(new Error('not found'))) as unknown as DispatchFn
+    const executeFn = vi.fn(() => Promise.resolve(new IOResult()))
+    const [, io] = await handleBash(dispatch, executeFn, ['/disk/missing.sh'], s)
+    expect(io.exitCode).toBe(127)
+    expect(decode(io.stderr instanceof Uint8Array ? io.stderr : null)).toMatch(/missing\.sh/)
+    expect(executeFn).not.toHaveBeenCalled()
+  })
+
+  it('reads the script from stdin with -s', async () => {
+    const s = new Session({ sessionId: 'test', cwd: '/' })
+    const dispatch = vi.fn() as unknown as DispatchFn
+    let executed = ''
+    const executeFn = vi.fn((script: string) => {
+      executed = script
+      return Promise.resolve(new IOResult())
+    })
+    const stdin = new TextEncoder().encode('echo from stdin\n')
+    const [, io] = await handleBash(dispatch, executeFn, ['-s'], s, stdin)
+    expect(io.exitCode).toBe(0)
+    expect(executed).toBe('echo from stdin\n')
+    expect(dispatch).not.toHaveBeenCalled()
   })
 })
 

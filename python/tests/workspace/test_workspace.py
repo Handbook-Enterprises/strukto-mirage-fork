@@ -2370,3 +2370,44 @@ def test_man_index_lists_resources():
     text = _stdout(io).decode()
     assert "# general" in text
     assert "- bc" in text
+
+
+# ── bash / sh / source run a script FILE from a mount ─────────────
+
+
+def test_bash_runs_script_file():
+    ws = _ws()
+    _exec(ws, "echo 'echo hello-from-script' > /disk/run.sh")
+    io = _exec(ws, "bash /disk/run.sh")
+    assert io.exit_code == 0
+    # The file's CONTENTS run — not the path as a command.
+    assert _stdout(io) == b"hello-from-script\n"
+
+
+def test_sh_runs_script_file_alias():
+    ws = _ws()
+    _exec(ws, "printf 'echo a\\necho b\\n' > /disk/multi.sh")
+    io = _exec(ws, "sh /disk/multi.sh")
+    assert _stdout(io) == b"a\nb\n"
+
+
+def test_bash_script_relative_path_resolves_against_cwd():
+    ws = _ws()
+    _exec(ws, "echo 'echo rel-ok' > /disk/rel.sh")
+    io = _exec(ws, "cd /disk && bash rel.sh")
+    assert _stdout(io) == b"rel-ok\n"
+
+
+def test_bash_missing_script_exits_127():
+    ws = _ws()
+    io = _exec(ws, "bash /disk/nope.sh")
+    assert io.exit_code == 127
+    assert b"nope.sh" in (io.stderr or b"")
+
+
+def test_source_runs_script_file():
+    ws = _ws()
+    _exec(ws, "echo 'echo sourced-ok' > /disk/lib.sh")
+    io = _exec(ws, "source /disk/lib.sh")
+    assert io.exit_code == 0
+    assert _stdout(io) == b"sourced-ok\n"
