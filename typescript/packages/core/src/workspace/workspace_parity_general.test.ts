@@ -499,6 +499,60 @@ describe('workspace: while loop iteration limit warning', () => {
   })
 })
 
+describe('workspace: bash/sh run a script FILE from a mount', () => {
+  it('bash /path/script.sh executes the file contents, not the path', async () => {
+    const { ws } = await makeWorkspace()
+    await ws.execute("echo 'echo hello-from-script' > /disk/run.sh")
+    const io = await ws.execute('bash /disk/run.sh')
+    expect(stdoutStr(io)).toBe('hello-from-script\n')
+    expect(io.exitCode).toBe(0)
+    await ws.close()
+  })
+
+  it('sh /path/script.sh behaves the same (alias)', async () => {
+    const { ws } = await makeWorkspace()
+    await ws.execute("printf 'echo a\\necho b\\n' > /disk/multi.sh")
+    const io = await ws.execute('sh /disk/multi.sh')
+    expect(stdoutStr(io)).toBe('a\nb\n')
+    await ws.close()
+  })
+
+  it('a relative script path resolves against cwd', async () => {
+    const { ws } = await makeWorkspace()
+    await ws.execute("echo 'echo rel-ok' > /disk/rel.sh")
+    const io = await ws.execute('cd /disk && bash rel.sh')
+    expect(stdoutStr(io)).toBe('rel-ok\n')
+    await ws.close()
+  })
+
+  it('bash on a missing file exits 127 with a diagnostic', async () => {
+    const { ws } = await makeWorkspace()
+    const io = await ws.execute('bash /disk/nope.sh')
+    expect(io.exitCode).toBe(127)
+    expect(stderrStr(io)).toMatch(/nope\.sh/)
+    await ws.close()
+  })
+
+  // `source` / `.` shared the same file-read helper; an arg-order bug made an
+  // absolute path collapse to "/" ("no mount matches path: /"). Regression test.
+  it('source FILE runs the file in the current shell', async () => {
+    const { ws } = await makeWorkspace()
+    await ws.execute("echo 'echo sourced-ok' > /disk/lib.sh")
+    const io = await ws.execute('source /disk/lib.sh')
+    expect(stdoutStr(io)).toBe('sourced-ok\n')
+    expect(io.exitCode).toBe(0)
+    await ws.close()
+  })
+
+  it('. FILE (dot alias) resolves a relative path against cwd', async () => {
+    const { ws } = await makeWorkspace()
+    await ws.execute("echo 'echo dot-ok' > /disk/lib.sh")
+    const io = await ws.execute('cd /disk && . lib.sh')
+    expect(stdoutStr(io)).toBe('dot-ok\n')
+    await ws.close()
+  })
+})
+
 describe('workspace: count occurrences helper sanity', () => {
   it('handles empty buf', () => {
     expect(countOccurrences(new Uint8Array(), 'x')).toBe(0)

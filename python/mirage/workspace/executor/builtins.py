@@ -391,6 +391,26 @@ async def handle_read(
     return None, IOResult(), ExecutionNode(command="read", exit_code=0)
 
 
+async def _read_script_file(
+    dispatch: Callable,
+    path: str | PathSpec,
+    session: Session,
+) -> str:
+    """Read a script FILE from the VFS and return its decoded text.
+
+    Raises if the path can't be read; callers format the diagnostic
+    (``source`` vs ``bash``). Shared by ``source`` / ``.`` and
+    ``bash FILE`` / ``sh FILE``.
+    """
+    raw = _scope_path(path)
+    resolved = resolve_path(raw, session.cwd)
+    scope = _to_scope(resolved)
+    data, _ = await dispatch("read", scope)
+    if isinstance(data, bytes):
+        return data.decode(errors="replace")
+    return ""
+
+
 async def handle_source(
     dispatch: Callable,
     execute_fn: Callable,
@@ -399,13 +419,12 @@ async def handle_source(
 ) -> tuple[ByteSource | None, IOResult, ExecutionNode]:
     """Read a script file and execute it."""
     raw = _scope_path(path)
-    resolved = resolve_path(raw, session.cwd)
-    scope = _to_scope(resolved)
-    data, _ = await dispatch("read", scope)
-    if isinstance(data, bytes):
-        script = data.decode(errors="replace")
-    else:
-        script = ""
+    try:
+        script = await _read_script_file(dispatch, path, session)
+    except Exception as e:  # noqa: BLE001
+        err = (f"source: {raw}: {e}\n").encode()
+        return None, IOResult(exit_code=1, stderr=err), ExecutionNode(
+            command=f"source {raw}", exit_code=1, stderr=err)
     io = await execute_fn(script, session_id=session.session_id)
     return io.stdout, io, ExecutionNode(command=f"source {raw}",
                                         exit_code=io.exit_code)
@@ -427,12 +446,16 @@ _BASH_NOOP_LONG_FLAGS = frozenset(
 
 
 async def handle_bash(
+    dispatch: Callable,
     execute_fn: Callable,
     args: list[str],
     session: Session,
     stdin: ByteSource | None = None,
 ) -> tuple[ByteSource | None, IOResult, ExecutionNode]:
     script: str | None = None
+    # A positional (non-flag) argument is a script FILE to read and run, as in
+    # real ``bash script.sh`` — not the script text itself (``-c`` is inline).
+    script_file: str | None = None
     read_stdin = False
     i = 0
     while i < len(args):
@@ -479,9 +502,16 @@ async def handle_bash(
                                                              exit_code=2,
                                                              stderr=err)
         if script is None:
-            script = tok
+            script_file = tok
             break
         i += 1
+    if script is None and script_file is not None:
+        try:
+            script = await _read_script_file(dispatch, script_file, session)
+        except Exception as e:  # noqa: BLE001
+            err = (f"bash: {script_file}: {e}\n").encode()
+            return None, IOResult(exit_code=127, stderr=err), ExecutionNode(
+                command=f"bash {script_file}", exit_code=127, stderr=err)
     if script is None and read_stdin and stdin is not None:
         stdin_data = await materialize(stdin)
         if stdin_data:
@@ -489,9 +519,10 @@ async def handle_bash(
             stdin = None
     if script is None:
         return None, IOResult(), ExecutionNode(command="bash", exit_code=0)
+    label = (f"bash {script_file}"
+             if script_file is not None else f"bash -c {script}")
     io = await execute_fn(script, session_id=session.session_id, stdin=stdin)
-    return io.stdout, io, ExecutionNode(command=f"bash -c {script}",
-                                        exit_code=io.exit_code)
+    return io.stdout, io, ExecutionNode(command=label, exit_code=io.exit_code)
 
 
 async def _eval_test(dispatch: Callable, argv: list) -> bool:

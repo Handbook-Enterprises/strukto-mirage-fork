@@ -374,12 +374,17 @@ function bashCError(): Result {
 }
 
 export async function handleBash(
+  dispatch: DispatchFn,
   executeFn: ExecuteStringFn,
   args: string[],
   session: Session,
   stdin: ByteSource | null = null,
 ): Promise<Result> {
   let script: string | null = null
+  // A positional (non-flag) argument is a script FILE to read and run, as in
+  // real `bash script.sh` — not the script text itself (`-c` supplies inline
+  // text). We capture the path here and read it from the VFS after parsing.
+  let scriptFile: string | null = null
   let readStdin = false
   let i = 0
   while (i < args.length) {
@@ -435,8 +440,21 @@ export async function handleBash(
         new ExecutionNode({ command: 'bash', exitCode: 2, stderr: err }),
       ]
     }
-    script = tok
+    scriptFile = tok
     break
+  }
+  if (script === null && scriptFile !== null) {
+    try {
+      script = await readScriptFile(dispatch, scriptFile, session)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      const stderr = new TextEncoder().encode(`bash: ${scriptFile}: ${msg}\n`)
+      return [
+        null,
+        new IOResult({ exitCode: 127, stderr }),
+        new ExecutionNode({ command: `bash ${scriptFile}`, exitCode: 127, stderr }),
+      ]
+    }
   }
   if (script === null && readStdin && stdin !== null) {
     const data = await materialize(stdin)
@@ -448,7 +466,8 @@ export async function handleBash(
     return [null, new IOResult(), new ExecutionNode({ command: 'bash', exitCode: 0 })]
   }
   const io = await executeFn(script, { sessionId: session.sessionId })
-  return [io.stdout, io, new ExecutionNode({ command: `bash -c ${script}`, exitCode: io.exitCode })]
+  const label = scriptFile !== null ? `bash ${scriptFile}` : `bash -c ${script}`
+  return [io.stdout, io, new ExecutionNode({ command: label, exitCode: io.exitCode })]
 }
 
 async function evalTest(dispatch: DispatchFn, argv: (string | PathSpec)[]): Promise<boolean> {
@@ -728,6 +747,37 @@ export async function handleRead(
 }
 
 /**
+ * Read a script FILE from the VFS and return its decoded text. Throws if the
+ * path can't be read; callers format the diagnostic (`source` vs `bash`).
+ * Shared by `source` / `.` and `bash FILE` / `sh FILE`.
+ */
+async function readScriptFile(
+  dispatch: DispatchFn,
+  path: string | PathSpec,
+  session: Session,
+): Promise<string> {
+  const raw = scopePath(path)
+  // resolvePath is (cwd, path) — relative script paths resolve against the
+  // session cwd. (The previous `source` impl had these swapped, so an absolute
+  // path collapsed to "/" → "no mount matches path: /".)
+  const resolved = resolvePath(session.cwd, raw)
+  const scope = toScope(resolved)
+  const [data] = await dispatch('read', scope)
+  if (data instanceof Uint8Array) {
+    return new TextDecoder().decode(data)
+  }
+  if (data !== null && data !== undefined) {
+    // ByteSource: collect into a string
+    const chunks: number[] = []
+    for await (const chunk of data as AsyncIterable<Uint8Array>) {
+      for (const b of chunk) chunks.push(b)
+    }
+    return new TextDecoder().decode(new Uint8Array(chunks))
+  }
+  return ''
+}
+
+/**
  * `source FILE` / `. FILE` — read a script file and execute it.
  * Mirrors Python's `mirage.workspace.executor.builtins.handle_source`.
  */
@@ -738,21 +788,9 @@ export async function handleSource(
   session: Session,
 ): Promise<Result> {
   const raw = scopePath(path)
-  const resolved = resolvePath(raw, session.cwd)
-  const scope = toScope(resolved)
-  let script = ''
+  let script: string
   try {
-    const [data] = await dispatch('read', scope)
-    if (data instanceof Uint8Array) {
-      script = new TextDecoder().decode(data)
-    } else if (data !== null && data !== undefined) {
-      // ByteSource: collect into a string
-      const chunks: number[] = []
-      for await (const chunk of data as AsyncIterable<Uint8Array>) {
-        for (const b of chunk) chunks.push(b)
-      }
-      script = new TextDecoder().decode(new Uint8Array(chunks))
-    }
+    script = await readScriptFile(dispatch, path, session)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     return [
