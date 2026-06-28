@@ -15,13 +15,14 @@
 import type { NotionAccessor } from '../../../accessor/notion.ts'
 import { IOResult, type ByteSource } from '../../../io/types.ts'
 import { ResourceName, type PathSpec } from '../../../types.ts'
+import { rstripSlash } from '../../../utils/slash.ts'
 import { command, type CommandFnResult, type CommandOpts } from '../../config.ts'
 import { specOf } from '../../spec/builtins.ts'
 
 const ENC = new TextEncoder()
 
 function posixBasename(p: string): string {
-  const stripped = p.replace(/\/+$/, '')
+  const stripped = rstripSlash(p)
   const idx = stripped.lastIndexOf('/')
   return idx >= 0 ? stripped.slice(idx + 1) : stripped
 }

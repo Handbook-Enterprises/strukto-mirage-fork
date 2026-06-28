@@ -14,6 +14,7 @@
 
 import type { IndexCacheStore } from '../../cache/index/store.ts'
 import type { PathSpec } from '../../types.ts'
+import { stripSlash } from '../../utils/slash.ts'
 import type { NotionTransport } from './_client.ts'
 import { normalizePage, toJsonBytes } from './normalize.ts'
 import { getChildBlocks, getPage } from './pages.ts'
@@ -40,7 +41,7 @@ export async function read(
   if (prefix !== '' && p.startsWith(prefix)) {
     p = p.slice(prefix.length) || '/'
   }
-  const key = p.replace(/^\/+|\/+$/g, '')
+  const key = stripSlash(p)
   if (key === '') throw enoent(path.original)
   const parts = key.split('/')
   const last = parts[parts.length - 1] ?? ''

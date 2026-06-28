@@ -15,6 +15,7 @@
 import type { NotionAccessor } from '../../../accessor/notion.ts'
 import { IOResult, type ByteSource } from '../../../io/types.ts'
 import { ResourceName, type PathSpec } from '../../../types.ts'
+import { rstripSlash } from '../../../utils/slash.ts'
 import { command, type CommandFnResult, type CommandOpts } from '../../config.ts'
 import { specOf } from '../../spec/builtins.ts'
 
@@ -25,8 +26,8 @@ function posixDirname(p: string): string {
   if (idx < 0) return ''
   if (idx === 0) return '/'
   let head = p.slice(0, idx)
-  if (head !== '' && /^\/+$/.test(head)) return '/'
-  head = head.replace(/\/+$/, '')
+  if (head !== '' && rstripSlash(head) === '') return '/'
+  head = rstripSlash(head)
   return head === '' ? '/' : head
 }
 
