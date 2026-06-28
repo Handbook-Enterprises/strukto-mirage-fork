@@ -256,6 +256,7 @@ export { interpretEscapes } from './commands/builtin/utils/escapes.ts'
 export { deflateRaw, gunzip, gzip, inflateRaw } from './utils/compress.ts'
 export { decodeBase64, encodeBase64 } from './utils/base64.ts'
 export { md5, md5Hex, sha256, sha256Hex } from './utils/hash.ts'
+export { lstripSlash, rstripSlash, stripSlash } from './utils/slash.ts'
 export {
   evalJsonlStream,
   isJsonlPath,

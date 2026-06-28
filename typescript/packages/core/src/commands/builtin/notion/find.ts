@@ -18,6 +18,7 @@ import { resolveNotionGlob } from '../../../core/notion/glob.ts'
 import { readdir as notionReaddir } from '../../../core/notion/readdir.ts'
 import { IOResult, type ByteSource } from '../../../io/types.ts'
 import { PathSpec, ResourceName } from '../../../types.ts'
+import { stripSlash } from '../../../utils/slash.ts'
 import { command, type CommandFnResult, type CommandOpts } from '../../config.ts'
 import { specOf } from '../../spec/builtins.ts'
 import { metadataProvision } from './_provision.ts'
@@ -86,13 +87,13 @@ async function findCommand(
     prefix: searchPrefix,
   })
   const allPaths = await walk(accessor, searchSpec, opts.index ?? undefined, md, 0)
-  const stripped = searchPath.replace(/^\/+|\/+$/g, '')
+  const stripped = stripSlash(searchPath)
   const baseDepth = stripped !== '' ? (stripped.match(/\//g)?.length ?? 0) : -1
   const sorted = [...allPaths].sort()
   const results: string[] = []
   for (const p of sorted) {
     const entryName = p.split('/').pop() ?? p
-    const stripPath = p.replace(/^\/+|\/+$/g, '')
+    const stripPath = stripSlash(p)
     const slashes = stripPath !== '' ? (stripPath.match(/\//g)?.length ?? 0) : 0
     const depth = slashes - (baseDepth + 1)
     if (mdMin !== null && depth < mdMin) continue

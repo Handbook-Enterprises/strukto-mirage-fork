@@ -13,6 +13,7 @@
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
 import { applyMountFilter } from '../../utils/mount_filter.ts'
+import { stripSlash } from '../../utils/slash.ts'
 import { IndexEntry } from '../../cache/index/config.ts'
 import type { IndexCacheStore } from '../../cache/index/store.ts'
 import type { PathSpec } from '../../types.ts'
@@ -58,7 +59,7 @@ async function readdirImpl(
   if (prefix !== '' && p.startsWith(prefix)) {
     p = p.slice(prefix.length) || '/'
   }
-  const key = p.replace(/^\/+|\/+$/g, '')
+  const key = stripSlash(p)
   const virtualKey = makeVirtualKey(prefix, key)
 
   if (key === '') {
