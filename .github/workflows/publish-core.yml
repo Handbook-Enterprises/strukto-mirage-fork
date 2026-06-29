@@ -62,8 +62,11 @@ jobs:
       - name: Publish @viewengine/mirage-core
         working-directory: typescript/packages/core
         run: |
+          # --tag latest: these viewengine.N versions are semver prereleases
+          # (hyphen), and npm 11 refuses to implicitly tag a prerelease. The
+          # fork ships them as its current release, matching .8-.15 on `latest`.
           if [ "${{ inputs.dry_run }}" = "true" ]; then
-            npm publish --dry-run --access public --provenance
+            npm publish --dry-run --access public --provenance --tag latest
           else
-            npm publish --access public --provenance
+            npm publish --access public --provenance --tag latest
           fi
