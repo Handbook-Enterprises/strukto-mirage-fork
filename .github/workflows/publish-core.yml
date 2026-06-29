@@ -6,7 +6,9 @@ name: publish @viewengine/mirage-core
 # — the workflow does NOT bump the version, only publishes what's in the
 # tagged tree. Bump the version in a commit first, then tag.
 #
-# Requires repo secret NPM_TOKEN with publish rights to @viewengine.
+# Auth: npm Trusted Publishing (OIDC) via `id-token: write` — no NPM_TOKEN.
+# Configure the trusted publisher on npmjs.com for @viewengine/mirage-core:
+# repo Handbook-Enterprises/strukto-mirage-fork, workflow publish-core.yml.
 
 "on":
   push:
@@ -40,6 +42,10 @@ jobs:
         with:
           version: "10.32.1"
 
+      # npm Trusted Publishing (OIDC) requires npm >= 11.5.1; Node 22 ships 10.x.
+      - name: Upgrade npm for trusted publishing
+        run: npm install -g npm@latest
+
       - name: Confirm tag matches package version
         if: github.event_name == 'push'
         run: |
@@ -55,8 +61,6 @@ jobs:
 
       - name: Publish @viewengine/mirage-core
         working-directory: typescript/packages/core
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           if [ "${{ inputs.dry_run }}" = "true" ]; then
             npm publish --dry-run --access public --provenance
