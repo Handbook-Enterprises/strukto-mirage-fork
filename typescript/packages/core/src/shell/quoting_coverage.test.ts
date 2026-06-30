@@ -241,6 +241,48 @@ describe('shell quoting coverage (port of tests/shell/test_quoting_coverage.py)'
     })
   })
 
+  describe('newlines inside quoted values are preserved', () => {
+    // Regression: tree-sitter-bash stores embedded newlines in the gaps
+    // between `string_content` children, so the double-quoted expansion path
+    // used to drop them — multi-line `--text "..."` (Slack replies, etc.)
+    // collapsed onto a single line. Spaces survived; only newlines were lost.
+    it('double-quoted value keeps blank line + per-line newlines', async () => {
+      const ws = await makeQuotingWs()
+      const r = await run(ws, 'echo "line one\n\nbullet a\nbullet b"')
+      expect(r.out).toBe('line one\n\nbullet a\nbullet b\n')
+      await ws.close()
+    })
+
+    it('single-quoted value keeps newlines', async () => {
+      const ws = await makeQuotingWs()
+      const r = await run(ws, "echo 'a\nb'")
+      expect(r.out).toBe('a\nb\n')
+      await ws.close()
+    })
+
+    it('double-quoted value keeps newlines around an expansion', async () => {
+      const ws = await makeQuotingWs()
+      await ws.execute('export X=hello')
+      const r = await run(ws, 'echo "a\n$X\nb"')
+      expect(r.out).toBe('a\nhello\nb\n')
+      await ws.close()
+    })
+
+    it('CRLF inside a double-quoted value is preserved', async () => {
+      const ws = await makeQuotingWs()
+      const r = await run(ws, 'echo "a\r\nb"')
+      expect(r.out).toBe('a\r\nb\n')
+      await ws.close()
+    })
+
+    it('backslash-newline line continuation still collapses (no regression)', async () => {
+      const ws = await makeQuotingWs()
+      const r = await run(ws, 'echo "abc\\\ndef"')
+      expect(r.out).toBe('abcdef\n')
+      await ws.close()
+    })
+  })
+
   describe('echo quoting matrix (parametrized in Python)', () => {
     const cases: [string, string][] = [
       ['hello world', 'hello world\n'],

@@ -130,12 +130,29 @@ export async function expandNode(
   }
 
   if (ntype === NT.STRING) {
-    const parts: string[] = []
+    // tree-sitter-bash treats newlines inside a double-quoted string as
+    // "extras": a literal `\n` (or `\r\n`) is not captured inside any
+    // `string_content` child but instead sits in the *gap* between two
+    // adjacent children. Concatenating child texts alone therefore silently
+    // drops embedded newlines, collapsing multi-line quoted values (e.g. a
+    // multi-line `--text "..."`) onto one line. Spaces/tabs are unaffected
+    // because they stay inside `string_content`; line continuations
+    // (`\<newline>`) also stay inside a single `string_content` and are
+    // handled by the STRING_CONTENT branch — so only true embedded newlines
+    // land in gaps. Reconstruct those gaps verbatim from the node's own
+    // text while still expanding `$var` / `${...}` / `$(...)` children.
+    const full = tsNode.text
+    let cursor = 0
+    let result = ''
     for (const child of tsNode.children) {
+      const ctext = child.text
+      const idx = full.indexOf(ctext, cursor)
+      if (idx > cursor) result += full.slice(cursor, idx)
+      if (idx >= 0) cursor = idx + ctext.length
       if (child.type === NT.DQUOTE) continue
-      parts.push(await expandNode(child, session, executeFn, callStack))
+      result += await expandNode(child, session, executeFn, callStack)
     }
-    return parts.join('')
+    return result
   }
 
   if (ntype === NT.STRING_CONTENT) {
