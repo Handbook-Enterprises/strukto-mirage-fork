@@ -391,6 +391,14 @@ export class Workspace {
           }
           return result
         }
+        case 'MKDIR': {
+          await this.fs.mkdir(path)
+          return undefined
+        }
+        case 'STAT': {
+          const stat = await this.fs.stat(path)
+          return { size: stat.size ?? 0, isDir: stat.type === FileType.DIRECTORY, mtime: 0 }
+        }
       }
     }
   }
@@ -399,9 +407,12 @@ export class Workspace {
    * Enforces the shell's boundaries for a bridged runtime op: read-only mount
    * mode (writes rejected) and per-mount glob visibility (hidden paths denied).
    */
-  private async assertBridgeAccess(op: 'READ' | 'WRITE' | 'LIST', path: string): Promise<void> {
+  private async assertBridgeAccess(
+    op: 'READ' | 'WRITE' | 'LIST' | 'MKDIR' | 'STAT',
+    path: string,
+  ): Promise<void> {
     const [, , mode] = await this.resolve(path)
-    if (op === 'WRITE' && mode === MountMode.READ) {
+    if ((op === 'WRITE' || op === 'MKDIR') && mode === MountMode.READ) {
       throw new Error(`mount at '${path}' is read-only`)
     }
     const mount = this.registry.mountFor(path)
