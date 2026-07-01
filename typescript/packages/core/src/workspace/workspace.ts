@@ -131,6 +131,16 @@ const VALID_MODES: readonly string[] = [MountMode.READ, MountMode.WRITE, MountMo
 
 export type { PythonRuntime } from './executor/python/types.ts'
 
+/**
+ * Runs a shell command in the workspace. Handed to an injected python runtime
+ * (alongside the fs bridge) so it can shell out / subprocess through the same
+ * enforced shell the agent uses.
+ */
+export type WorkspaceExecFn = (
+  command: string,
+  options?: { stdin?: ByteSource | null; signal?: AbortSignal },
+) => Promise<ExecuteResult>
+
 export interface WorkspaceOptions {
   mode?: MountMode
   modeOverrides?: Record<string, MountMode>
@@ -175,7 +185,7 @@ export interface WorkspaceOptions {
    * is allowed without an EXEC-mode mount. Opt-in — default behaviour is
    * unchanged when omitted.
    */
-  pythonRuntimeFactory?: (bridge: BridgeDispatchFn) => PythonRuntime
+  pythonRuntimeFactory?: (bridge: BridgeDispatchFn, exec: WorkspaceExecFn) => PythonRuntime
 }
 
 export class ExecuteResult {
@@ -308,7 +318,9 @@ export class Workspace {
     if (options.pythonRuntimeFactory !== undefined) {
       // Injected runtime gets an *enforced* bridge (mode + glob filters) and may
       // exec without an EXEC-mode mount. Default Pyodide path is untouched.
-      this.pythonRuntime = options.pythonRuntimeFactory(this.buildWorkspaceBridge(true))
+      this.pythonRuntime = options.pythonRuntimeFactory(this.buildWorkspaceBridge(true), (cmd, opts) =>
+        this.execute(cmd, opts),
+      )
       this.registry.allowExec()
     } else {
       this.pythonRuntime = new PyodideRuntime({
