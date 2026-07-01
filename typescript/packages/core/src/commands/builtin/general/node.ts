@@ -89,15 +89,14 @@ async function nodeCommand(
   // `-` is the conventional "read the program from stdin" sentinel (`echo … |
   // node -`), same as bare `node`. Treat it as no-script so it falls through to
   // the stdin-as-code branch below rather than being read as a file named `-`.
-  const isStdinDash = (v: string | undefined): boolean => v === '-'
   if (hasCode) {
     argStrs = [...paths.map((p) => p.original), ...texts]
   } else if (paths.length > 0) {
     const first = paths[0] ?? null
-    scriptPath = first !== null && isStdinDash(first.original) ? null : first
+    scriptPath = first !== null && first.original === '-' ? null : first
     argStrs = [...paths.slice(1).map((p) => p.original), ...texts]
   } else if (texts.length > 0) {
-    scriptPath = isStdinDash(texts[0]) ? null : resolveScript(texts[0] ?? '', opts.cwd)
+    scriptPath = texts[0] === '-' ? null : resolveScript(texts[0] ?? '', opts.cwd)
     argStrs = texts.slice(1)
   } else {
     argStrs = []
