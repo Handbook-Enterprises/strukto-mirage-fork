@@ -90,6 +90,11 @@ export async function handleJs(
       args,
       env: opts.env,
       stdin: stdinBytes,
+      // Entry path (process.argv[1]) + its directory (relative-import base), so
+      // a runtime can resolve the entry's own `import './x'` from the workspace.
+      // `pathScope` is null for `node -e` / stdin, leaving both undefined.
+      scriptPath: pathScope?.original,
+      scriptDir: pathScope?.directory,
     })
     return [
       result.stdout.length > 0 ? result.stdout : null,

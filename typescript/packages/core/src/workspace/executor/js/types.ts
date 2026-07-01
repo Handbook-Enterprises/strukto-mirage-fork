@@ -17,6 +17,19 @@ export interface JsRunArgs {
   args: string[]
   env: Record<string, string>
   stdin: Uint8Array | null
+  /**
+   * The entry script's path as invoked (Node's `process.argv[1]`), or undefined
+   * for `node -e` / stdin programs. Optional; ignored by runtimes that don't
+   * surface argv.
+   */
+  scriptPath?: string | undefined
+  /**
+   * Absolute directory of the entry script — the base a runtime resolves the
+   * entry's own relative imports against (`node /a/b/main.js` doing
+   * `import './x.js'` → `/a/b/x.js`). Undefined for `-e` / stdin. Mirrors
+   * `PythonRunArgs.scriptDir` (sys.path[0]).
+   */
+  scriptDir?: string | undefined
 }
 
 export interface JsRunResult {

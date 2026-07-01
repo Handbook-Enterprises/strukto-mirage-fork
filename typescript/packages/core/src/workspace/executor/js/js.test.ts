@@ -68,6 +68,8 @@ function makeFakeRuntime(bridge: BridgeDispatchFn, exec: WorkspaceExecFn): JsRun
             const r = await exec(rest.join(' '))
             return { stdout: r.stdout, stderr: r.stderr, exitCode: r.exitCode }
           }
+          case 'SCRIPTINFO':
+            return ok(JSON.stringify({ scriptPath: args.scriptPath ?? null, scriptDir: args.scriptDir ?? null }))
           default:
             return fail(`unknown op ${op}\n`)
         }
@@ -116,6 +118,24 @@ describe('node/js runtime injection', () => {
     const ws = await makeJsWorkspace()
     const io = await ws.execute("js -e 'ECHO viajs'")
     expect(stdoutStr(io)).toBe('viajs')
+    await ws.close()
+  })
+
+  it('forwards the entry script path + directory to the runtime', async () => {
+    const ws = await makeJsWorkspace()
+    await ws.execute('printf SCRIPTINFO > /ram/main.js')
+    const io = await ws.execute('node /ram/main.js')
+    expect(io.exitCode).toBe(0)
+    expect(JSON.parse(stdoutStr(io))).toEqual({ scriptPath: '/ram/main.js', scriptDir: '/ram/' })
+    await ws.close()
+  })
+
+  it('leaves scriptPath/scriptDir undefined for `-e` and stdin', async () => {
+    const ws = await makeJsWorkspace()
+    const e = await ws.execute("node -e 'SCRIPTINFO'")
+    expect(JSON.parse(stdoutStr(e))).toEqual({ scriptPath: null, scriptDir: null })
+    const s = await ws.execute('printf SCRIPTINFO | node -')
+    expect(JSON.parse(stdoutStr(s))).toEqual({ scriptPath: null, scriptDir: null })
     await ws.close()
   })
 
