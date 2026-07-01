@@ -69,7 +69,12 @@ function makeFakeRuntime(bridge: BridgeDispatchFn, exec: WorkspaceExecFn): JsRun
             return { stdout: r.stdout, stderr: r.stderr, exitCode: r.exitCode }
           }
           case 'SCRIPTINFO':
-            return ok(JSON.stringify({ scriptPath: args.scriptPath ?? null, scriptDir: args.scriptDir ?? null }))
+            return ok(
+              JSON.stringify({
+                scriptPath: args.scriptPath ?? null,
+                scriptDir: args.scriptDir ?? null,
+              }),
+            )
           default:
             return fail(`unknown op ${op}\n`)
         }
