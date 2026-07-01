@@ -420,6 +420,9 @@ export class Workspace {
         renameDst = enforce ? posixNormpath(decoded) : decoded
       }
       if (enforce) {
+        // EXISTS stays total: a filter-hidden path reads as "doesn't exist"
+        // (false) rather than throwing, while still not leaking it.
+        if (op === 'EXISTS' && !this.isBridgePathVisible(path)) return false
         await this.assertBridgeAccess(op, path)
         // RENAME writes to a second path (bytes = UTF-8 dst); enforce it too.
         if (op === 'RENAME' && renameDst !== undefined) {
@@ -434,6 +437,7 @@ export class Workspace {
           const buf =
             bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes as ArrayLike<number>)
           await this.fs.writeFile(path, buf)
+          if (enforce) await this.invalidateAfterWriteByPath(path)
           return undefined
         }
         case 'LIST': {
@@ -462,16 +466,24 @@ export class Workspace {
           return await this.fs.exists(path)
         case 'MKDIR':
           await this.fs.mkdir(path)
+          if (enforce) await this.invalidateAfterWriteByPath(path)
           return undefined
         case 'DELETE':
           await this.fs.unlink(path)
+          if (enforce) await this.invalidateAfterWriteByPath(path)
           return undefined
         case 'RMDIR':
           await this.fs.rmdir(path)
+          if (enforce) await this.invalidateAfterWriteByPath(path)
           return undefined
         case 'RENAME': {
           if (renameDst === undefined) throw new Error('RENAME op requires a destination path')
           await this.fs.rename(path, renameDst)
+          if (enforce) {
+            // Invalidate both source (removed) and destination (created).
+            await this.invalidateAfterWriteByPath(path)
+            await this.invalidateAfterWriteByPath(renameDst)
+          }
           return undefined
         }
       }

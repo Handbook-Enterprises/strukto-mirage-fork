@@ -187,6 +187,10 @@ describe('node/js runtime injection', () => {
     const read = await ws.execute("node -e 'READ /ram/hidden.secret'")
     expect(read.exitCode).toBe(1)
     expect(stderrStr(read)).toMatch(/No such file/)
+    // EXISTS stays total: a hidden path reads as `false`, not a thrown error.
+    const exists = await ws.execute("node -e 'EXISTS /ram/hidden.secret'")
+    expect(exists.exitCode).toBe(0)
+    expect(stdoutStr(exists)).toBe('false')
     // `..` can't be used to dodge the visibility check (normalized first).
     const dodge = await ws.execute("node -e 'READ /ram/sub/../hidden.secret'")
     expect(dodge.exitCode).toBe(1)
