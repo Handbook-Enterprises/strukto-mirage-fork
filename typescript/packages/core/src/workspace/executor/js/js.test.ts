@@ -119,6 +119,30 @@ describe('node/js runtime injection', () => {
     await ws.close()
   })
 
+  it('reads the program from stdin when the script arg is `-` (echo … | node -)', async () => {
+    const ws = await makeJsWorkspace()
+    const io = await ws.execute('echo "ECHO from-stdin" | node -')
+    expect(io.exitCode).toBe(0)
+    expect(stdoutStr(io)).toBe('from-stdin')
+    await ws.close()
+  })
+
+  it('the `js -` alias reads stdin too', async () => {
+    const ws = await makeJsWorkspace()
+    const io = await ws.execute('echo "ECHO viajsdash" | js -')
+    expect(io.exitCode).toBe(0)
+    expect(stdoutStr(io)).toBe('viajsdash')
+    await ws.close()
+  })
+
+  it('`node -` with no stdin reports "no input" rather than reading a file named -', async () => {
+    const ws = await makeJsWorkspace()
+    const io = await ws.execute('node -')
+    expect(io.exitCode).toBe(1)
+    expect(stderrStr(io)).toMatch(/no input/)
+    await ws.close()
+  })
+
   it('bridge WRITE + READ hit the real workspace filesystem', async () => {
     const ws = await makeJsWorkspace()
     const w = await ws.execute("node -e 'WRITE /ram/out.txt hello'")
