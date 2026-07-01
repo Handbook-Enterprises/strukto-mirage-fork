@@ -18,6 +18,7 @@ import { GENERAL_CURL } from './curl.ts'
 import { GENERAL_DATE } from './date.ts'
 import { GENERAL_EXPR } from './expr.ts'
 import { GENERAL_HISTORY } from './history.ts'
+import { GENERAL_JS, GENERAL_NODE } from './node.ts'
 import { GENERAL_PYTHON, GENERAL_PYTHON3 } from './python.ts'
 import { GENERAL_SEQ } from './seq.ts'
 import { GENERAL_SLEEP } from './sleep.ts'
@@ -28,6 +29,7 @@ export { GENERAL_CURL } from './curl.ts'
 export { GENERAL_DATE } from './date.ts'
 export { GENERAL_EXPR } from './expr.ts'
 export { GENERAL_HISTORY } from './history.ts'
+export { GENERAL_JS, GENERAL_NODE } from './node.ts'
 export { GENERAL_PYTHON, GENERAL_PYTHON3 } from './python.ts'
 export { GENERAL_SEQ } from './seq.ts'
 export { GENERAL_SLEEP } from './sleep.ts'
@@ -38,6 +40,8 @@ export const GENERAL_COMMANDS: readonly RegisteredCommand[] = [
   ...GENERAL_CURL,
   ...GENERAL_DATE,
   ...GENERAL_EXPR,
+  ...GENERAL_NODE,
+  ...GENERAL_JS,
   ...GENERAL_PYTHON,
   ...GENERAL_PYTHON3,
   ...GENERAL_SEQ,
