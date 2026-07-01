@@ -36,6 +36,7 @@ import {
 import type { RegisteredOp } from '../../ops/registry.ts'
 import type { Resource } from '../../resource/base.ts'
 import { ConsistencyPolicy, MountMode, PathSpec } from '../../types.ts'
+import type { JsRuntime } from '../executor/js/types.ts'
 import type { PythonRuntime } from '../executor/python/types.ts'
 
 type CmdKey = string
@@ -339,6 +340,7 @@ export class Mount {
       env?: Record<string, string>
       execAllowed?: boolean
       pythonRuntime?: PythonRuntime
+      jsRuntime?: JsRuntime
     } = {},
   ): Promise<[ByteSource | null, IOResult]> {
     const extension =
@@ -389,6 +391,7 @@ export class Mount {
       ...(opts.env !== undefined ? { env: opts.env } : {}),
       ...(opts.execAllowed !== undefined ? { execAllowed: opts.execAllowed } : {}),
       ...(opts.pythonRuntime !== undefined ? { pythonRuntime: opts.pythonRuntime } : {}),
+      ...(opts.jsRuntime !== undefined ? { jsRuntime: opts.jsRuntime } : {}),
     }
 
     setVirtualPrefix(mountPrefix)

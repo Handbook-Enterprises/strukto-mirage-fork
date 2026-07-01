@@ -17,6 +17,7 @@ import type { IndexCacheStore } from '../cache/index/index.ts'
 import { IOResult, type ByteSource } from '../io/types.ts'
 import type { Resource } from '../resource/base.ts'
 import type { PathSpec } from '../types.ts'
+import type { JsRuntime } from '../workspace/executor/js/types.ts'
 import type { PythonRuntime } from '../workspace/executor/python/types.ts'
 import type { AggregateResult } from './builtin/aggregators.ts'
 import { renderHelp } from './spec/help.ts'
@@ -59,6 +60,7 @@ export interface CommandOpts {
   env?: Record<string, string>
   execAllowed?: boolean
   pythonRuntime?: PythonRuntime
+  jsRuntime?: JsRuntime
 }
 
 export type CommandFnResult = [ByteSource | null, IOResult] | null

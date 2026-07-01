@@ -23,8 +23,27 @@ export interface FSLike {
   writeFile(path: string, bytes: Uint8Array): void
 }
 
+/**
+ * The op-set a bridged runtime can issue against the workspace filesystem.
+ * `READ | WRITE | LIST` are the original Pyodide ops; the remaining fs-mutation
+ * and metadata ops exist for richer runtimes (e.g. a Node-style `node:fs`) and
+ * are ignored by the Python path, which never issues them. The trailing `bytes`
+ * carries the file contents for `WRITE` and the UTF-8-encoded destination path
+ * for `RENAME`.
+ */
+export type BridgeOp =
+  | 'READ'
+  | 'WRITE'
+  | 'LIST'
+  | 'STAT'
+  | 'EXISTS'
+  | 'MKDIR'
+  | 'DELETE'
+  | 'RMDIR'
+  | 'RENAME'
+
 export type BridgeDispatchFn = (
-  op: 'READ' | 'WRITE' | 'LIST' | 'MKDIR' | 'STAT',
+  op: BridgeOp,
   path: string,
   bytes?: Uint8Array,
 ) => Promise<unknown>

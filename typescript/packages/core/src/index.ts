@@ -51,9 +51,24 @@ export { DevStore, DevFiles } from './resource/dev/store.ts'
 export {
   type ExecuteOptions,
   ExecuteResult,
+  type JsRuntime,
+  type PythonRuntime,
   Workspace,
+  type WorkspaceExecFn,
   type WorkspaceOptions,
 } from './workspace/workspace.ts'
+export type {
+  JsRunArgs,
+  JsRunResult,
+  JsReplRunArgs,
+  JsReplRunResult,
+} from './workspace/executor/js/types.ts'
+export { JsRuntimeUnavailableError } from './workspace/executor/js/types.ts'
+export type {
+  BridgeDispatchFn,
+  BridgeOp,
+  MirageEntry,
+} from './workspace/executor/python/mirage_bridge.ts'
 export { WorkspaceRunner } from './workspace/runner.ts'
 export {
   createShellParser,
