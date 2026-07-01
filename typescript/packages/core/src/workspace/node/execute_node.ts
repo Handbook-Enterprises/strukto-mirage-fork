@@ -41,7 +41,7 @@ import {
   getUnsetNames,
   getWhileParts,
 } from '../../shell/helpers.ts'
-import type { PyodideRuntime } from '../executor/python/runtime.ts'
+import type { PythonRuntime } from '../executor/python/types.ts'
 import type { JobTable } from '../../shell/job_table.ts'
 import {
   ERREXIT_EXEMPT_TYPES,
@@ -120,7 +120,7 @@ export interface ExecuteNodeDeps {
   registerCloser: (fn: () => Promise<void>) => void
   ensureOpen?: (resource: Resource) => Promise<void>
   unmount?: (prefix: string) => Promise<void>
-  pythonRuntime?: PyodideRuntime
+  pythonRuntime?: PythonRuntime
   history?: CommandHistory
   signal?: AbortSignal
 }
@@ -542,7 +542,7 @@ async function executeCommand(
   jobTable: JobTable | null,
   ensureOpen?: (resource: Resource) => Promise<void>,
   unmount?: (prefix: string) => Promise<void>,
-  pythonRuntime?: PyodideRuntime,
+  pythonRuntime?: PythonRuntime,
   history?: CommandHistory,
   signal?: AbortSignal,
 ): Promise<Result> {
@@ -647,7 +647,7 @@ async function runCommandBody(
   jobTable: JobTable | null,
   ensureOpen?: (resource: Resource) => Promise<void>,
   unmount?: (prefix: string) => Promise<void>,
-  pythonRuntime?: PyodideRuntime,
+  pythonRuntime?: PythonRuntime,
   history?: CommandHistory,
   signal?: AbortSignal,
 ): Promise<Result> {

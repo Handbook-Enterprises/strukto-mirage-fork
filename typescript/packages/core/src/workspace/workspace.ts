@@ -59,7 +59,8 @@ import { type MountFilterConfig, MountRegistry } from './mount/registry.ts'
 import { handlePythonRepl } from './executor/python/handle.ts'
 import type { BridgeDispatchFn, MirageEntry } from './executor/python/mirage_bridge.ts'
 import { PyodideRuntime } from './executor/python/runtime.ts'
-import type { PythonReplRunResult } from './executor/python/types.ts'
+import type { PythonReplRunResult, PythonRuntime } from './executor/python/types.ts'
+import { isPathVisible } from '../utils/mount_filter.ts'
 import { makeAbortError } from './abort.ts'
 import { executeNode } from './node/execute_node.ts'
 import { provisionNode } from './node/provision_node.ts'
@@ -128,6 +129,18 @@ const DISPATCH_WRITE_OPS = new Set([
 
 const VALID_MODES: readonly string[] = [MountMode.READ, MountMode.WRITE, MountMode.EXEC]
 
+export type { PythonRuntime } from './executor/python/types.ts'
+
+/**
+ * Runs a shell command in the workspace. Handed to an injected python runtime
+ * (alongside the fs bridge) so it can shell out / subprocess through the same
+ * enforced shell the agent uses.
+ */
+export type WorkspaceExecFn = (
+  command: string,
+  options?: { stdin?: ByteSource | null; signal?: AbortSignal },
+) => Promise<ExecuteResult>
+
 export interface WorkspaceOptions {
   mode?: MountMode
   modeOverrides?: Record<string, MountMode>
@@ -165,6 +178,14 @@ export interface WorkspaceOptions {
     bootstrapCode?: string
     denyPackages?: readonly string[]
   }
+  /**
+   * Inject a custom python runtime instead of the built-in `PyodideRuntime`.
+   * Receives an *enforced* workspace bridge (respects mount read-only mode and
+   * glob visibility filters, matching the shell). When provided, `python`/exec
+   * is allowed without an EXEC-mode mount. Opt-in — default behaviour is
+   * unchanged when omitted.
+   */
+  pythonRuntimeFactory?: (bridge: BridgeDispatchFn, exec: WorkspaceExecFn) => PythonRuntime
 }
 
 export class ExecuteResult {
@@ -246,7 +267,7 @@ export class Workspace {
   private closed = false
   private readonly workspaceId: string = `ws-${String(Date.now())}-${Math.random().toString(36).slice(2, 10)}`
   private readonly closers: (() => Promise<void>)[] = []
-  private readonly pythonRuntime: PyodideRuntime
+  private readonly pythonRuntime: PythonRuntime
   private fuseMountpointValue: string | null = null
   private fuseOwnedInProcess = false
   // Drift check state populated by Workspace.load. Empty during normal
@@ -294,10 +315,19 @@ export class Workspace {
     this.shellParserFactory = options.shellParserFactory ?? null
     this.agentId = options.agentId ?? DEFAULT_AGENT_ID
     const userPython = options.python ?? {}
-    this.pythonRuntime = new PyodideRuntime({
-      ...userPython,
-      workspaceBridge: this.buildWorkspaceBridge(),
-    })
+    if (options.pythonRuntimeFactory !== undefined) {
+      // Injected runtime gets an *enforced* bridge (mode + glob filters) and may
+      // exec without an EXEC-mode mount. Default Pyodide path is untouched.
+      this.pythonRuntime = options.pythonRuntimeFactory(this.buildWorkspaceBridge(true), (cmd, opts) =>
+        this.execute(cmd, opts),
+      )
+      this.registry.allowExec()
+    } else {
+      this.pythonRuntime = new PyodideRuntime({
+        ...userPython,
+        workspaceBridge: this.buildWorkspaceBridge(),
+      })
+    }
     this.closers.push(() => this.pythonRuntime.close())
     this.cache = options.cache ?? new RAMFileCacheStore({ limit: options.cacheLimit ?? '512MB' })
     const defaultMount = this.registry.setDefaultMount(this.cache)
@@ -331,8 +361,15 @@ export class Workspace {
     }
   }
 
-  private buildWorkspaceBridge(): BridgeDispatchFn {
+  /**
+   * When `enforce` is true, each op first goes through {@link assertBridgeAccess}
+   * so a bridged runtime respects the same read-only mode + glob-visibility
+   * boundaries the shell enforces. Default (`false`) preserves existing
+   * behaviour for the built-in Pyodide runtime.
+   */
+  private buildWorkspaceBridge(enforce = false): BridgeDispatchFn {
     return async (op, path, bytes) => {
+      if (enforce) await this.assertBridgeAccess(op, path)
       switch (op) {
         case 'READ':
           return await this.fs.readFile(path)
@@ -355,6 +392,21 @@ export class Workspace {
           return result
         }
       }
+    }
+  }
+
+  /**
+   * Enforces the shell's boundaries for a bridged runtime op: read-only mount
+   * mode (writes rejected) and per-mount glob visibility (hidden paths denied).
+   */
+  private async assertBridgeAccess(op: 'READ' | 'WRITE' | 'LIST', path: string): Promise<void> {
+    const [, , mode] = await this.resolve(path)
+    if (op === 'WRITE' && mode === MountMode.READ) {
+      throw new Error(`mount at '${path}' is read-only`)
+    }
+    const mount = this.registry.mountFor(path)
+    if (mount?.filter !== null && mount?.filter !== undefined && !isPathVisible(path, mount.filter)) {
+      throw new Error(`${path}: No such file or directory`)
     }
   }
 

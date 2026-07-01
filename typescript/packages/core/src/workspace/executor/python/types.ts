@@ -39,6 +39,19 @@ export interface PythonReplRunResult {
   status: ReplStatus
 }
 
+/**
+ * The python runtime contract the Workspace drives. `PyodideRuntime` implements
+ * it structurally; a host may inject an alternative (e.g. a wasm interpreter)
+ * via `WorkspaceOptions.pythonRuntimeFactory`.
+ */
+export interface PythonRuntime {
+  run(args: PythonRunArgs): Promise<PythonRunResult>
+  runRepl(args: PythonReplRunArgs): Promise<PythonReplRunResult>
+  addMount(prefix: string): Promise<void>
+  removeMount(prefix: string): Promise<void>
+  close(): Promise<void>
+}
+
 export class PyodideUnavailableError extends Error {
   constructor(message: string, options?: { cause?: unknown }) {
     super(message, options)

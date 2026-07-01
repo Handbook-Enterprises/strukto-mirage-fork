@@ -36,7 +36,7 @@ import {
 import type { RegisteredOp } from '../../ops/registry.ts'
 import type { Resource } from '../../resource/base.ts'
 import { ConsistencyPolicy, MountMode, PathSpec } from '../../types.ts'
-import type { PyodideRuntime } from '../executor/python/runtime.ts'
+import type { PythonRuntime } from '../executor/python/types.ts'
 
 type CmdKey = string
 type OpKey = string
@@ -338,7 +338,7 @@ export class Mount {
       sessionId?: string
       env?: Record<string, string>
       execAllowed?: boolean
-      pythonRuntime?: PyodideRuntime
+      pythonRuntime?: PythonRuntime
     } = {},
   ): Promise<[ByteSource | null, IOResult]> {
     const extension =

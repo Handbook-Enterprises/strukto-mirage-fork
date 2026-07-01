@@ -286,7 +286,19 @@ export class MountRegistry {
     return this.mountList
   }
 
+  private forceExec = false
+
+  /**
+   * Allow `python`/exec even without an EXEC-mode mount. Opt-in; set by the
+   * Workspace when a custom python runtime is injected via
+   * `WorkspaceOptions.pythonRuntimeFactory`. Does not affect default workspaces.
+   */
+  allowExec(): void {
+    this.forceExec = true
+  }
+
   isExecAllowed(): boolean {
+    if (this.forceExec) return true
     for (const m of this.mountList) {
       const prefixNoTrail = m.prefix.replace(/\/+$/, '') || '/'
       if (prefixNoTrail === '/') return m.mode === MountMode.EXEC
