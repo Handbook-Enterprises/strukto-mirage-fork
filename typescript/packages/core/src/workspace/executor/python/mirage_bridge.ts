@@ -24,7 +24,7 @@ export interface FSLike {
 }
 
 export type BridgeDispatchFn = (
-  op: 'READ' | 'WRITE' | 'LIST',
+  op: 'READ' | 'WRITE' | 'LIST' | 'MKDIR' | 'STAT',
   path: string,
   bytes?: Uint8Array,
 ) => Promise<unknown>
