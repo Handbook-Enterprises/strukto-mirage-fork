@@ -114,6 +114,7 @@ async function pythonCommand(
       stdin: stdinForRuntime,
       env: opts.env ?? {},
       code: resolvedCode,
+      cwd: opts.cwd,
     },
     { runtime: opts.pythonRuntime },
   )

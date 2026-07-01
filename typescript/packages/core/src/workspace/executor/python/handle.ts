@@ -50,6 +50,7 @@ export async function handlePython(
     stdin: ByteSource | null
     env: Record<string, string>
     code: string | null
+    cwd?: string
   },
   deps: HandlePythonDeps,
 ): Promise<Result> {
@@ -90,6 +91,11 @@ export async function handlePython(
       args,
       env: opts.env,
       stdin: stdinBytes,
+      // Entry-script directory (sys.path[0] analogue) + cwd, so a runtime can
+      // resolve sibling modules from the workspace. `pathScope` is null for
+      // `python -c` / stdin programs, leaving scriptDir undefined.
+      scriptDir: pathScope?.directory,
+      cwd: opts.cwd,
     })
     return [
       result.stdout.length > 0 ? result.stdout : null,
