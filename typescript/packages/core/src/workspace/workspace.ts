@@ -57,10 +57,13 @@ import { WorkspaceFS } from './fs.ts'
 import type { Mount } from './mount/mount.ts'
 import { type MountFilterConfig, MountRegistry } from './mount/registry.ts'
 import { handlePythonRepl } from './executor/python/handle.ts'
-import type { BridgeDispatchFn, MirageEntry } from './executor/python/mirage_bridge.ts'
+import type { BridgeDispatchFn, BridgeOp, MirageEntry } from './executor/python/mirage_bridge.ts'
 import { PyodideRuntime } from './executor/python/runtime.ts'
 import type { PythonReplRunResult, PythonRuntime } from './executor/python/types.ts'
+import { handleJsRepl } from './executor/js/handle.ts'
+import type { JsReplRunResult, JsRuntime } from './executor/js/types.ts'
 import { isPathVisible } from '../utils/mount_filter.ts'
+import { posixNormpath } from './expand/classify.ts'
 import { makeAbortError } from './abort.ts'
 import { executeNode } from './node/execute_node.ts'
 import { provisionNode } from './node/provision_node.ts'
@@ -130,6 +133,7 @@ const DISPATCH_WRITE_OPS = new Set([
 const VALID_MODES: readonly string[] = [MountMode.READ, MountMode.WRITE, MountMode.EXEC]
 
 export type { PythonRuntime } from './executor/python/types.ts'
+export type { JsRuntime } from './executor/js/types.ts'
 
 /**
  * Runs a shell command in the workspace. Handed to an injected python runtime
@@ -186,6 +190,15 @@ export interface WorkspaceOptions {
    * unchanged when omitted.
    */
   pythonRuntimeFactory?: (bridge: BridgeDispatchFn, exec: WorkspaceExecFn) => PythonRuntime
+  /**
+   * Inject a JavaScript runtime, enabling the `node`/`js` commands. There is no
+   * built-in default (unlike Pyodide for Python), so JS is unavailable unless a
+   * host provides this. Receives the same *enforced* workspace bridge (node:fs —
+   * read-only mode + glob visibility) and `WorkspaceExecFn` (node:child_process
+   * — runs real bash through the shell) as the injected python path. When
+   * provided, `node`/exec is allowed without an EXEC-mode mount. Opt-in.
+   */
+  jsRuntimeFactory?: (bridge: BridgeDispatchFn, exec: WorkspaceExecFn) => JsRuntime
 }
 
 export class ExecuteResult {
@@ -268,6 +281,7 @@ export class Workspace {
   private readonly workspaceId: string = `ws-${String(Date.now())}-${Math.random().toString(36).slice(2, 10)}`
   private readonly closers: (() => Promise<void>)[] = []
   private readonly pythonRuntime: PythonRuntime
+  private readonly jsRuntime: JsRuntime | undefined
   private fuseMountpointValue: string | null = null
   private fuseOwnedInProcess = false
   // Drift check state populated by Workspace.load. Empty during normal
@@ -329,6 +343,22 @@ export class Workspace {
       })
     }
     this.closers.push(() => this.pythonRuntime.close())
+    // JS runtime is injection-only (no built-in default). Gets the same enforced
+    // bridge (node:fs) plus an exec channel (node:child_process) that runs
+    // through the shell, and — like the injected python path — may exec without
+    // an EXEC-mode mount.
+    if (options.jsRuntimeFactory !== undefined) {
+      this.jsRuntime = options.jsRuntimeFactory(this.buildWorkspaceBridge(true), (cmd, opts) =>
+        this.execute(cmd, opts),
+      )
+      this.registry.allowExec()
+    } else {
+      this.jsRuntime = undefined
+    }
+    if (this.jsRuntime !== undefined) {
+      const rt = this.jsRuntime
+      this.closers.push(() => rt.close())
+    }
     this.cache = options.cache ?? new RAMFileCacheStore({ limit: options.cacheLimit ?? '512MB' })
     const defaultMount = this.registry.setDefaultMount(this.cache)
     for (const resource of [...Object.values(withObserver), this.cache]) {
@@ -358,6 +388,17 @@ export class Workspace {
     for (const m of this.registry.allMounts()) {
       if (m.prefix === observerPrefix || m.prefix === '/.sessions/') continue
       void this.forwardAddMountToPython(m.prefix)
+      if (this.jsRuntime !== undefined) void this.forwardAddMountToJs(m.prefix)
+    }
+  }
+
+  private async forwardAddMountToJs(prefix: string): Promise<void> {
+    if (this.jsRuntime === undefined) return
+    try {
+      await this.jsRuntime.addMount(prefix)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.warn(`workspace: JS mount preload failed for ${prefix}: ${msg}`)
     }
   }
 
@@ -368,8 +409,26 @@ export class Workspace {
    * behaviour for the built-in Pyodide runtime.
    */
   private buildWorkspaceBridge(enforce = false): BridgeDispatchFn {
-    return async (op, path, bytes) => {
-      if (enforce) await this.assertBridgeAccess(op, path)
+    return async (op, rawPath, bytes) => {
+      // Under enforcement, normalize once so `..` segments can't dodge the
+      // mode/visibility checks, and use the normalized path for both the checks
+      // and the I/O. Non-enforced (default Pyodide) keeps the raw path.
+      const path = enforce ? posixNormpath(rawPath) : rawPath
+      let renameDst: string | undefined
+      if (op === 'RENAME' && bytes !== undefined) {
+        const decoded = new TextDecoder().decode(bytes)
+        renameDst = enforce ? posixNormpath(decoded) : decoded
+      }
+      if (enforce) {
+        // EXISTS stays total: a filter-hidden path reads as "doesn't exist"
+        // (false) rather than throwing, while still not leaking it.
+        if (op === 'EXISTS' && !this.isBridgePathVisible(path)) return false
+        await this.assertBridgeAccess(op, path)
+        // RENAME writes to a second path (bytes = UTF-8 dst); enforce it too.
+        if (op === 'RENAME' && renameDst !== undefined) {
+          await this.assertBridgeAccess('WRITE', renameDst)
+        }
+      }
       switch (op) {
         case 'READ':
           return await this.fs.readFile(path)
@@ -378,12 +437,16 @@ export class Workspace {
           const buf =
             bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes as ArrayLike<number>)
           await this.fs.writeFile(path, buf)
+          if (enforce) await this.invalidateAfterWriteByPath(path)
           return undefined
         }
         case 'LIST': {
           const entries = await this.fs.readdir(path)
           const result: MirageEntry[] = []
           for (const entry of entries) {
+            // Don't leak (or stat) entries the mount filter would hide — the
+            // shell hides them from ls/find, so a bridged runtime must too.
+            if (enforce && !this.isBridgePathVisible(entry)) continue
             const stat = await this.fs.stat(entry)
             const isDir = stat.type === FileType.DIRECTORY
             const size = isDir ? 0 : (stat.size ?? 0)
@@ -391,13 +454,37 @@ export class Workspace {
           }
           return result
         }
-        case 'MKDIR': {
-          await this.fs.mkdir(path)
-          return undefined
-        }
+        // The ops below are for non-Python runtimes (e.g. node:fs); Pyodide
+        // never issues them. They map straight onto WorkspaceFS.
         case 'STAT': {
           const stat = await this.fs.stat(path)
-          return { size: stat.size ?? 0, isDir: stat.type === FileType.DIRECTORY, mtime: 0 }
+          const isDir = stat.type === FileType.DIRECTORY
+          const entry: MirageEntry = { path, size: isDir ? 0 : (stat.size ?? 0), isDir }
+          return entry
+        }
+        case 'EXISTS':
+          return await this.fs.exists(path)
+        case 'MKDIR':
+          await this.fs.mkdir(path)
+          if (enforce) await this.invalidateAfterWriteByPath(path)
+          return undefined
+        case 'DELETE':
+          await this.fs.unlink(path)
+          if (enforce) await this.invalidateAfterWriteByPath(path)
+          return undefined
+        case 'RMDIR':
+          await this.fs.rmdir(path)
+          if (enforce) await this.invalidateAfterWriteByPath(path)
+          return undefined
+        case 'RENAME': {
+          if (renameDst === undefined) throw new Error('RENAME op requires a destination path')
+          await this.fs.rename(path, renameDst)
+          if (enforce) {
+            // Invalidate both source (removed) and destination (created).
+            await this.invalidateAfterWriteByPath(path)
+            await this.invalidateAfterWriteByPath(renameDst)
+          }
+          return undefined
         }
       }
     }
@@ -407,18 +494,23 @@ export class Workspace {
    * Enforces the shell's boundaries for a bridged runtime op: read-only mount
    * mode (writes rejected) and per-mount glob visibility (hidden paths denied).
    */
-  private async assertBridgeAccess(
-    op: 'READ' | 'WRITE' | 'LIST' | 'MKDIR' | 'STAT',
-    path: string,
-  ): Promise<void> {
+  private async assertBridgeAccess(op: BridgeOp, path: string): Promise<void> {
     const [, , mode] = await this.resolve(path)
-    if ((op === 'WRITE' || op === 'MKDIR') && mode === MountMode.READ) {
+    const isWrite =
+      op === 'WRITE' || op === 'MKDIR' || op === 'DELETE' || op === 'RMDIR' || op === 'RENAME'
+    if (isWrite && mode === MountMode.READ) {
       throw new Error(`mount at '${path}' is read-only`)
     }
-    const mount = this.registry.mountFor(path)
-    if (mount?.filter !== null && mount?.filter !== undefined && !isPathVisible(path, mount.filter)) {
+    if (!this.isBridgePathVisible(path)) {
       throw new Error(`${path}: No such file or directory`)
     }
+  }
+
+  /** Whether `path` passes its mount's glob-visibility filter (true if none). */
+  private isBridgePathVisible(path: string): boolean {
+    const mount = this.registry.mountFor(path)
+    if (mount?.filter === null || mount?.filter === undefined) return true
+    return isPathVisible(path, mount.filter)
   }
 
   private async getShellParser(): Promise<ShellParser> {
@@ -522,6 +614,7 @@ export class Workspace {
       for (const op of resourceOps) this.opsRegistry.register(op)
     }
     void this.forwardAddMountToPython(prefix)
+    if (this.jsRuntime !== undefined) void this.forwardAddMountToJs(prefix)
     return m
   }
 
@@ -563,6 +656,14 @@ export class Workspace {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       console.warn(`workspace: failed to remove Python mount for ${prefix}: ${msg}`)
+    }
+    if (this.jsRuntime !== undefined) {
+      try {
+        await this.jsRuntime.removeMount(prefix)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.warn(`workspace: failed to remove JS mount for ${prefix}: ${msg}`)
+      }
     }
     const resource = removed.resource
     const stillMounted = this.registry.allMounts().some((m) => m.resource === resource)
@@ -894,6 +995,7 @@ export class Workspace {
       ensureOpen,
       unmount: (prefix: string) => this.unmount(prefix),
       pythonRuntime: this.pythonRuntime,
+      ...(this.jsRuntime !== undefined ? { jsRuntime: this.jsRuntime } : {}),
       history: this.history,
       ...(options.signal !== undefined ? { signal: options.signal } : {}),
     }
@@ -948,6 +1050,23 @@ export class Workspace {
     if (this.closed) throw new Error('Workspace is closed')
     const sessionId = options.sessionId ?? this.sessionManager.defaultId
     return handlePythonRepl(code, sessionId, { runtime: this.pythonRuntime })
+  }
+
+  async executeJsRepl(
+    code: string,
+    options: { sessionId?: string } = {},
+  ): Promise<JsReplRunResult> {
+    if (this.closed) throw new Error('Workspace is closed')
+    if (this.jsRuntime === undefined) {
+      return {
+        stdout: new Uint8Array(),
+        stderr: new TextEncoder().encode('node: js runtime is not available\n'),
+        exitCode: 127,
+        status: 'complete',
+      }
+    }
+    const sessionId = options.sessionId ?? this.sessionManager.defaultId
+    return handleJsRepl(code, sessionId, { runtime: this.jsRuntime })
   }
 
   async toStateDict(): Promise<WorkspaceStateDict> {

@@ -41,6 +41,7 @@ import {
   getUnsetNames,
   getWhileParts,
 } from '../../shell/helpers.ts'
+import type { JsRuntime } from '../executor/js/types.ts'
 import type { PythonRuntime } from '../executor/python/types.ts'
 import type { JobTable } from '../../shell/job_table.ts'
 import {
@@ -121,6 +122,7 @@ export interface ExecuteNodeDeps {
   ensureOpen?: (resource: Resource) => Promise<void>
   unmount?: (prefix: string) => Promise<void>
   pythonRuntime?: PythonRuntime
+  jsRuntime?: JsRuntime
   history?: CommandHistory
   signal?: AbortSignal
 }
@@ -168,6 +170,7 @@ export async function executeNode(
       deps.ensureOpen,
       deps.unmount,
       deps.pythonRuntime,
+      deps.jsRuntime,
       deps.history,
       deps.signal,
     )
@@ -543,6 +546,7 @@ async function executeCommand(
   ensureOpen?: (resource: Resource) => Promise<void>,
   unmount?: (prefix: string) => Promise<void>,
   pythonRuntime?: PythonRuntime,
+  jsRuntime?: JsRuntime,
   history?: CommandHistory,
   signal?: AbortSignal,
 ): Promise<Result> {
@@ -613,6 +617,7 @@ async function executeCommand(
       ensureOpen,
       unmount,
       pythonRuntime,
+      jsRuntime,
       history,
       signal,
     )
@@ -648,6 +653,7 @@ async function runCommandBody(
   ensureOpen?: (resource: Resource) => Promise<void>,
   unmount?: (prefix: string) => Promise<void>,
   pythonRuntime?: PythonRuntime,
+  jsRuntime?: JsRuntime,
   history?: CommandHistory,
   signal?: AbortSignal,
 ): Promise<Result> {
@@ -854,6 +860,7 @@ async function runCommandBody(
     unmount,
     history,
     pythonRuntime,
+    jsRuntime,
   )
 }
 
