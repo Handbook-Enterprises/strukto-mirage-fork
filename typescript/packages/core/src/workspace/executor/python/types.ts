@@ -17,6 +17,15 @@ export interface PythonRunArgs {
   args: string[]
   env: Record<string, string>
   stdin: Uint8Array | null
+  /**
+   * Absolute directory of the entry script (Python's `sys.path[0]` analogue),
+   * or undefined for `python -c` / stdin programs. A runtime that resolves
+   * sibling modules from the workspace (e.g. a cf-monty import bundler) roots
+   * its lookups here. Optional and ignored by runtimes that don't need it.
+   */
+  scriptDir?: string | undefined
+  /** The shell's current working directory at invocation, when known. */
+  cwd?: string | undefined
 }
 
 export interface PythonRunResult {
