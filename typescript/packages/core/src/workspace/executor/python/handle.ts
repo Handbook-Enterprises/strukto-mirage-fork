@@ -17,13 +17,13 @@ import { IOResult, materialize } from '../../../io/types.ts'
 import { PathSpec } from '../../../types.ts'
 import type { DispatchFn } from '../cross_mount.ts'
 import { ExecutionNode } from '../../types.ts'
-import type { PyodideRuntime } from './runtime.ts'
+import type { PythonRuntime } from './types.ts'
 import { PyodideUnavailableError, type PythonReplRunResult } from './types.ts'
 
 type Result = [ByteSource | null, IOResult, ExecutionNode]
 
 export interface HandlePythonDeps {
-  runtime: PyodideRuntime
+  runtime: PythonRuntime
 }
 
 function readAllBytes(data: unknown): Promise<Uint8Array> {
