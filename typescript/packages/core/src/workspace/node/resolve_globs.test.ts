@@ -56,7 +56,7 @@ describe('resolveGlobs', () => {
     expect(out).toEqual([p])
   })
 
-  it('passes through glob PathSpecs when the resource lacks glob', async () => {
+  it('fails clearly when the resource lacks glob support', async () => {
     const reg = new MountRegistry({ '/ram': new PlainResource() }, MountMode.WRITE)
     const p = new PathSpec({
       original: '/ram/*.txt',
@@ -64,9 +64,9 @@ describe('resolveGlobs', () => {
       pattern: '*.txt',
       resolved: false,
     })
-    const out = await resolveGlobs([p], reg)
-    expect(out).toHaveLength(1)
-    expect(out[0]).toBe(p)
+    await expect(resolveGlobs([p], reg)).rejects.toThrow(
+      "glob: mount '/ram/' does not support glob expansion",
+    )
   })
 
   it('expands glob PathSpecs through resource.glob', async () => {

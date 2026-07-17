@@ -76,18 +76,29 @@ function makeFakeRuntime(bridge: BridgeDispatchFn, exec: WorkspaceExecFn): JsRun
               }),
             )
           default:
-            return fail(`unknown op ${op}\n`)
+            return fail(`unknown op ${String(op)}\n`)
         }
       } catch (err) {
         return fail(err instanceof Error ? err.message : String(err))
       }
     },
-    async runRepl() {
-      return { stdout: new Uint8Array(), stderr: new Uint8Array(), exitCode: 0, status: 'complete' }
+    runRepl() {
+      return Promise.resolve({
+        stdout: new Uint8Array(),
+        stderr: new Uint8Array(),
+        exitCode: 0,
+        status: 'complete' as const,
+      })
     },
-    async addMount() {},
-    async removeMount() {},
-    async close() {},
+    addMount() {
+      return Promise.resolve()
+    },
+    removeMount() {
+      return Promise.resolve()
+    },
+    close() {
+      return Promise.resolve()
+    },
   }
 }
 

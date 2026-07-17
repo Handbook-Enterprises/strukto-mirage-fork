@@ -38,6 +38,17 @@ describe('command() registers multiple resources', () => {
     }
   })
 
+  it('propagates strict mount routing to every resource registration', () => {
+    const cmds = command({
+      name: 'provider-read',
+      resource: ['gdocs', 'gdrive'],
+      spec: new CommandSpec(),
+      fn: noopFn,
+      mountRouting: 'cwd-or-unique',
+    })
+    expect(cmds.every((candidate) => candidate.mountRouting === 'cwd-or-unique')).toBe(true)
+  })
+
   it('single-resource string still produces one RegisteredCommand', () => {
     const cmds = command({
       name: 'ls',

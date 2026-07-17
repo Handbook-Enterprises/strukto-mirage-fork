@@ -15,10 +15,56 @@
 import type { GSheetsAccessor } from '../../accessor/gsheets.ts'
 import type { IndexCacheStore } from '../../cache/index/store.ts'
 import { PathSpec } from '../../types.ts'
-import { SHEETS_API_BASE, type TokenManager, googleGet } from '../google/_client.ts'
+import {
+  DRIVE_API_BASE,
+  SHEETS_API_BASE,
+  type TokenManager,
+  googleGet,
+  googleGetBytes,
+} from '../google/_client.ts'
 import { readdir } from './readdir.ts'
 
 const ENC = new TextEncoder()
+
+export interface SheetTab {
+  title: string
+  sheetId: number
+  index: number
+}
+
+interface ValuesResponse {
+  values?: unknown[][]
+}
+
+export function parseSpreadsheetId(raw: string): string | null {
+  const value = raw.trim()
+  if (value === '') return null
+  const pathMatch = /\/spreadsheets\/d\/([A-Za-z0-9_-]+)/.exec(value)
+  if (pathMatch?.[1] !== undefined) return pathMatch[1]
+  const queryMatch = /[?&]id=([A-Za-z0-9_-]+)/.exec(value)
+  if (queryMatch?.[1] !== undefined) return queryMatch[1]
+  return /^[A-Za-z0-9_-]+$/.test(value) ? value : null
+}
+
+export function quoteSheetTitle(title: string): string {
+  return /^[A-Za-z0-9_]+$/.test(title) ? title : `'${title.replaceAll("'", "''")}'`
+}
+
+function csvCell(value: unknown): string {
+  let text: string
+  if (value == null) text = ''
+  else if (typeof value === 'string') text = value
+  else if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    text = String(value)
+  } else {
+    text = JSON.stringify(value)
+  }
+  return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text
+}
+
+export function valuesToCsv(values: readonly (readonly unknown[])[]): string {
+  return values.map((row) => row.map(csvCell).join(',')).join('\n')
+}
 
 function enoent(p: string): Error {
   const e = new Error(`ENOENT: ${p}`) as Error & { code: string }
@@ -40,9 +86,53 @@ export async function readValues(
   spreadsheetId: string,
   range: string,
 ): Promise<Uint8Array> {
-  const url = `${SHEETS_API_BASE}/spreadsheets/${spreadsheetId}/values/${range}`
+  const url = `${SHEETS_API_BASE}/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}`
   const data = await googleGet(tm, url)
   return ENC.encode(JSON.stringify(data))
+}
+
+export async function readValuesCsv(
+  tm: TokenManager,
+  spreadsheetId: string,
+  range: string,
+): Promise<Uint8Array> {
+  const url = `${SHEETS_API_BASE}/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}`
+  const data = (await googleGet(tm, url)) as ValuesResponse
+  return ENC.encode(valuesToCsv(data.values ?? []))
+}
+
+export async function exportFirstSheetCsv(
+  tm: TokenManager,
+  spreadsheetId: string,
+): Promise<Uint8Array> {
+  const mime = encodeURIComponent('text/csv')
+  const url = `${DRIVE_API_BASE}/files/${spreadsheetId}/export?mimeType=${mime}&supportsAllDrives=true`
+  return googleGetBytes(tm, url)
+}
+
+export async function fetchSheetTabs(tm: TokenManager, spreadsheetId: string): Promise<SheetTab[]> {
+  const fields = 'sheets.properties(sheetId,title,index)'
+  const url = `${SHEETS_API_BASE}/spreadsheets/${spreadsheetId}`
+  const data = (await googleGet(tm, url, { fields })) as {
+    sheets?: { properties?: { sheetId?: number; title?: string; index?: number } }[]
+  }
+  const tabs: SheetTab[] = []
+  for (const sheet of data.sheets ?? []) {
+    const properties = sheet.properties
+    if (
+      properties?.title === undefined ||
+      properties.sheetId === undefined ||
+      properties.index === undefined
+    ) {
+      continue
+    }
+    tabs.push({
+      title: properties.title,
+      sheetId: properties.sheetId,
+      index: properties.index,
+    })
+  }
+  return tabs.sort((a, b) => a.index - b.index)
 }
 
 export async function fetchSheetNames(tm: TokenManager, spreadsheetId: string): Promise<string[]> {

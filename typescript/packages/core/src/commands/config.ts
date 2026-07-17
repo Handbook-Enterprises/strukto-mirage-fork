@@ -88,6 +88,8 @@ export type ProvisionFn<A extends Accessor = Accessor> = (
 
 export type AggregateFn = (results: AggregateResult[]) => Uint8Array
 
+export type CommandMountRouting = 'legacy-first' | 'cwd-or-unique'
+
 export interface RegisteredCommandInit {
   name: string
   spec: CommandSpec
@@ -99,6 +101,7 @@ export interface RegisteredCommandInit {
   src?: string | null
   dst?: string | null
   write?: boolean
+  mountRouting?: CommandMountRouting
 }
 
 export class RegisteredCommand {
@@ -112,6 +115,7 @@ export class RegisteredCommand {
   readonly src: string | null
   readonly dst: string | null
   readonly write: boolean
+  readonly mountRouting: CommandMountRouting
 
   constructor(init: RegisteredCommandInit) {
     this.name = init.name
@@ -124,6 +128,7 @@ export class RegisteredCommand {
     this.src = init.src ?? null
     this.dst = init.dst ?? null
     this.write = init.write ?? false
+    this.mountRouting = init.mountRouting ?? 'legacy-first'
   }
 }
 
@@ -136,6 +141,7 @@ export interface CommandOptions<A extends Accessor = Accessor> {
   provision?: ProvisionFn<A> | null
   aggregate?: AggregateFn | null
   write?: boolean
+  mountRouting?: CommandMountRouting
 }
 
 const HELP_OPTION = new Option({
@@ -186,6 +192,7 @@ export function command<A extends Accessor = Accessor>(
         provisionFn: (options.provision ?? null) as ProvisionFn | null,
         aggregate: options.aggregate ?? null,
         write: options.write ?? false,
+        mountRouting: options.mountRouting ?? 'legacy-first',
       }),
   )
 }

@@ -42,11 +42,7 @@ export type BridgeOp =
   | 'RMDIR'
   | 'RENAME'
 
-export type BridgeDispatchFn = (
-  op: BridgeOp,
-  path: string,
-  bytes?: Uint8Array,
-) => Promise<unknown>
+export type BridgeDispatchFn = (op: BridgeOp, path: string, bytes?: Uint8Array) => Promise<unknown>
 
 export interface MirageBridge {
   fetch(path: string): Promise<Uint8Array>

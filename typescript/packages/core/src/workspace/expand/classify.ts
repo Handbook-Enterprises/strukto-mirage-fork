@@ -38,7 +38,10 @@ export function classifyWord(
     let w = word
     if (w.includes('\\')) w = unescapePath(w)
     const mount = registry.mountFor(w)
-    if (mount === null) return word
+    if (mount === null) {
+      if (hasGlob) throw new Error(`glob: no mounted path for pattern '${word}'`)
+      return word
+    }
     let isDir = w.endsWith('/')
     const path = posixNormpath(w)
     if (!isDir && `${path}/` === mount.prefix) {
@@ -74,7 +77,10 @@ export function classifyWord(
     }
     const path = posixNormpath(`${cwd.replace(/\/+$/, '')}/${word}`)
     const mount = registry.mountFor(path)
-    if (mount === null) return word
+    if (mount === null) {
+      if (word.includes('/')) throw new Error(`glob: no mounted path for pattern '${word}'`)
+      return word
+    }
     const lastSlash = path.lastIndexOf('/')
     return new PathSpec({
       original: path,

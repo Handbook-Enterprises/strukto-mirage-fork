@@ -13,6 +13,7 @@
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
 import type { RegisteredCommand } from '../../config.ts'
+import { ResourceName } from '../../../types.ts'
 import { GSLIDES_BASENAME } from './basename.ts'
 import { GSLIDES_CAT } from './cat.ts'
 import { GSLIDES_DIRNAME } from './dirname.ts'
@@ -31,7 +32,7 @@ import { GSLIDES_TAIL } from './tail.ts'
 import { GSLIDES_TREE } from './tree.ts'
 import { GSLIDES_WC } from './wc.ts'
 
-export const GSLIDES_COMMANDS: readonly RegisteredCommand[] = [
+const GSLIDES_ALL_COMMANDS: readonly RegisteredCommand[] = [
   ...GSLIDES_BASENAME,
   ...GSLIDES_CAT,
   ...GSLIDES_DIRNAME,
@@ -50,3 +51,11 @@ export const GSLIDES_COMMANDS: readonly RegisteredCommand[] = [
   ...GSLIDES_TREE,
   ...GSLIDES_WC,
 ]
+
+export const GSLIDES_COMMANDS = GSLIDES_ALL_COMMANDS.filter(
+  (command) => command.resource === null || command.resource === ResourceName.GSLIDES,
+)
+
+export const GSLIDES_GDRIVE_COMMANDS = GSLIDES_ALL_COMMANDS.filter(
+  (command) => command.resource === ResourceName.GDRIVE,
+)

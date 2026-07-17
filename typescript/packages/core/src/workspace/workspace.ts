@@ -332,8 +332,9 @@ export class Workspace {
     if (options.pythonRuntimeFactory !== undefined) {
       // Injected runtime gets an *enforced* bridge (mode + glob filters) and may
       // exec without an EXEC-mode mount. Default Pyodide path is untouched.
-      this.pythonRuntime = options.pythonRuntimeFactory(this.buildWorkspaceBridge(true), (cmd, opts) =>
-        this.execute(cmd, opts),
+      this.pythonRuntime = options.pythonRuntimeFactory(
+        this.buildWorkspaceBridge(true),
+        (cmd, opts) => this.execute(cmd, opts),
       )
       this.registry.allowExec()
     } else {
@@ -371,11 +372,7 @@ export class Workspace {
     for (const mount of [...this.registry.allMounts(), defaultMount]) {
       const cmds = mount.resource.commands?.()
       if (cmds !== undefined) {
-        for (const cmd of cmds) {
-          if (cmd.filetype !== null) mount.register(cmd)
-          else if (cmd.resource === null) mount.registerGeneral(cmd)
-          else mount.register(cmd)
-        }
+        mount.registerFns(cmds)
       }
       for (const cmd of GENERAL_COMMANDS) {
         mount.registerGeneral(cmd)

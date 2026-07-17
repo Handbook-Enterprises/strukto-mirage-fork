@@ -62,6 +62,34 @@ describe('handleCommand — command not found', () => {
     expect(exec.exitCode).toBe(127)
     expect(decode(io.stderr as Uint8Array)).toMatch(/command not found/)
   })
+
+  it('returns exit 2 with mount choices for an ambiguous strict command', async () => {
+    const reg = new MountRegistry(
+      { '/drive': new StubResource('google'), '/references': new StubResource('google') },
+      MountMode.READ,
+    )
+    const strict = command({
+      name: 'provider-read',
+      resource: 'google',
+      spec: new CommandSpec(),
+      fn: () => [null, new IOResult()],
+      mountRouting: 'cwd-or-unique',
+    })[0]
+    if (strict === undefined) throw new Error('strict command missing')
+    reg.mountForPrefix('/drive')?.register(strict)
+    reg.mountForPrefix('/references')?.register(strict)
+    const [, io, exec] = await handleCommand(
+      NEVER_EXECUTE,
+      NEVER_DISPATCH,
+      reg,
+      ['provider-read'],
+      new Session({ sessionId: 'test' }),
+    )
+    expect(io.exitCode).toBe(2)
+    expect(exec.exitCode).toBe(2)
+    expect(decode(io.stderr as Uint8Array)).toContain('/drive/, /references/')
+    expect(decode(io.stderr as Uint8Array)).toContain('--mount <prefix>')
+  })
 })
 
 describe('handleCommand — dispatches to mount that has the command', () => {

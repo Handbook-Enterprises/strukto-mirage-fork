@@ -81,7 +81,12 @@ export async function expandNode(
 ): Promise<string> {
   const ntype = tsNode.type
 
-  if (ntype === NT.WORD) return unescapeUnquoted(tsNode.text)
+  if (ntype === NT.WORD) {
+    const word = unescapeUnquoted(tsNode.text)
+    if (word === '~') return '/'
+    if (word.startsWith('~/')) return word.slice(1)
+    return word
+  }
   if (ntype === NT.NUMBER) return tsNode.text
   if (ntype === NT.COMMAND_NAME) return tsNode.text
 

@@ -67,4 +67,5 @@ export const GSHEETS_GWS_BATCH_UPDATE = command({
   resource: [ResourceName.GSHEETS, ResourceName.GDRIVE],
   spec: SPEC,
   fn: gwsSheetsBatchUpdateCommand,
+  write: true,
 })
