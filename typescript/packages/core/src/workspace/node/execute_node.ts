@@ -721,10 +721,7 @@ async function runCommandBody(
   // what should have been the mount path. Fall back to any mount that
   // owns the command so the spec is found and bare names classify.
   const cwdMount = registry.mountFor(session.cwd)
-  const spec =
-    cwdMount !== null
-      ? cwdMount.specFor(name)
-      : (registry.mountForCommand(name)?.specFor(name) ?? null)
+  const spec = cwdMount?.specFor(name) ?? registry.mountForCommand(name)?.specFor(name) ?? null
   if (spec !== null) {
     const [textSet, pathSet] = classifyArgvBySpec(spec, expanded.slice(1))
     textArgs = textSet.size > 0 ? textSet : null
@@ -851,7 +848,7 @@ async function runCommandBody(
     recurse,
     dispatch,
     registry,
-    classified,
+    resolved,
     session,
     stdin,
     callStack,
@@ -896,6 +893,7 @@ export function classifyArgvBySpec(
 
   const rawArgs: string[] = []
   const flagTextValues = new Set<string>()
+  const flagPathValues = new Set<string>()
   let i = 0
   let endOfFlags = false
   while (i < argv.length) {
@@ -919,6 +917,8 @@ export function classifyArgvBySpec(
       if (longValueFlags.has(tok) && i + 1 < argv.length) {
         if (valueFlagKinds.get(tok) === OperandKind.TEXT) {
           flagTextValues.add(argv[i + 1] ?? '')
+        } else if (valueFlagKinds.get(tok) === OperandKind.PATH) {
+          flagPathValues.add(argv[i + 1] ?? '')
         }
         i += 2
       } else {
@@ -938,6 +938,8 @@ export function classifyArgvBySpec(
         if (tok === vf && i + 1 < argv.length) {
           if (valueFlagKinds.get(vf) === OperandKind.TEXT) {
             flagTextValues.add(argv[i + 1] ?? '')
+          } else if (valueFlagKinds.get(vf) === OperandKind.PATH) {
+            flagPathValues.add(argv[i + 1] ?? '')
           }
           i += 2
           matched = true
@@ -946,6 +948,8 @@ export function classifyArgvBySpec(
         if (tok.startsWith(vf) && tok.length > vf.length) {
           if (valueFlagKinds.get(vf) === OperandKind.TEXT) {
             flagTextValues.add(tok.slice(vf.length))
+          } else if (valueFlagKinds.get(vf) === OperandKind.PATH) {
+            flagPathValues.add(tok.slice(vf.length))
           }
           i += 1
           matched = true
@@ -989,5 +993,6 @@ export function classifyArgvBySpec(
     else if (kind === OperandKind.PATH) pathSet.add(arg)
   }
   for (const v of flagTextValues) textSet.add(v)
+  for (const v of flagPathValues) pathSet.add(v)
   return [textSet, pathSet]
 }

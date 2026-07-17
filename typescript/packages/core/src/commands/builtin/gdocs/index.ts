@@ -13,6 +13,7 @@
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
 import type { RegisteredCommand } from '../../config.ts'
+import { ResourceName } from '../../../types.ts'
 import { GDOCS_BASENAME } from './basename.ts'
 import { GDOCS_CAT } from './cat.ts'
 import { GDOCS_DIRNAME } from './dirname.ts'
@@ -32,7 +33,7 @@ import { GDOCS_TAIL } from './tail.ts'
 import { GDOCS_TREE } from './tree.ts'
 import { GDOCS_WC } from './wc.ts'
 
-export const GDOCS_COMMANDS: readonly RegisteredCommand[] = [
+const GDOCS_ALL_COMMANDS: readonly RegisteredCommand[] = [
   ...GDOCS_BASENAME,
   ...GDOCS_CAT,
   ...GDOCS_DIRNAME,
@@ -52,3 +53,11 @@ export const GDOCS_COMMANDS: readonly RegisteredCommand[] = [
   ...GDOCS_TREE,
   ...GDOCS_WC,
 ]
+
+export const GDOCS_COMMANDS = GDOCS_ALL_COMMANDS.filter(
+  (command) => command.resource === null || command.resource === ResourceName.GDOCS,
+)
+
+export const GDOCS_GDRIVE_COMMANDS = GDOCS_ALL_COMMANDS.filter(
+  (command) => command.resource === ResourceName.GDRIVE,
+)

@@ -67,4 +67,5 @@ export const GDOCS_GWS_BATCH_UPDATE = command({
   resource: [ResourceName.GDOCS, ResourceName.GDRIVE],
   spec: SPEC,
   fn: gwsDocsBatchUpdateCommand,
+  write: true,
 })

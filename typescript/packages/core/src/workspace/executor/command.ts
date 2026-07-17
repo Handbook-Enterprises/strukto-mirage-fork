@@ -24,7 +24,7 @@ import type { JobTable } from '../../shell/job_table.ts'
 import { ERREXIT_EXEMPT_TYPES } from '../../shell/types.ts'
 import { PathSpec } from '../../types.ts'
 import type { Mount } from '../mount/mount.ts'
-import type { MountRegistry } from '../mount/registry.ts'
+import { AmbiguousCommandError, type MountRegistry } from '../mount/registry.ts'
 import type { JsRuntime } from './js/types.ts'
 import type { PythonRuntime } from './python/types.ts'
 import type { Session } from '../session/session.ts'
@@ -147,7 +147,20 @@ export async function handleCommand(
     }
   }
 
-  const mount = await registry.resolveMount(cmdName, pathScopes, session.cwd)
+  let mount: Mount | null
+  try {
+    mount = await registry.resolveMount(cmdName, pathScopes, session.cwd)
+  } catch (err) {
+    if (err instanceof AmbiguousCommandError) {
+      const errBytes = new TextEncoder().encode(`${err.message}\n`)
+      return [
+        null,
+        new IOResult({ exitCode: 2, stderr: errBytes }),
+        new ExecutionNode({ command: cmdStr, stderr: errBytes, exitCode: 2 }),
+      ]
+    }
+    throw err
+  }
   if (mount === null) {
     const err = new TextEncoder().encode(`${cmdName}: command not found`)
     return [

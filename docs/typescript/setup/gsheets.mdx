@@ -57,3 +57,15 @@ const sheets = new GSheetsResource({
 `read`, partial write (range updates).
 
 For the layout, sheet/tab structure, and write semantics see the [Python Sheets docs](/python/resource/gsheets).
+
+## Exact-ID reads
+
+`gws-sheets-read` is owned by Mirage core and is available from both Google Sheets and Google Drive resources. It accepts a spreadsheet ID or share URL, can list tabs, and can read by tab title, gid, or A1 range.
+
+```bash
+gws-sheets-read --id 'https://docs.google.com/spreadsheets/d/ID/edit' --list
+gws-sheets-read --id ID --tab 'Outlet Scorecard'
+gws-sheets-read --id ID --range "'Outlet Scorecard'!A1:C10" --format csv
+```
+
+The legacy `--spreadsheet ID --range A1` form still returns JSON. The `--id` form defaults value output to CSV. When several mounted resources provide the command, route explicitly with `--mount /sheets` or `cd` to the intended mount first. Run `gws-sheets-read --help` for the complete contract.

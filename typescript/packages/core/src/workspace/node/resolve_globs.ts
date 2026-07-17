@@ -13,7 +13,8 @@
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
 import type { Resource } from '../../resource/base.ts'
-import { PathSpec } from '../../types.ts'
+import { PathSpec, ResourceName } from '../../types.ts'
+import { posixNormpath } from '../expand/classify.ts'
 import type { MountRegistry } from '../mount/registry.ts'
 
 export interface ResourceWithGlob extends Resource {
@@ -22,6 +23,12 @@ export interface ResourceWithGlob extends Resource {
 
 function hasGlob(r: Resource): r is ResourceWithGlob {
   return 'glob' in r && typeof (r as { glob?: unknown }).glob === 'function'
+}
+
+function globResultLimit(resourceKind: string): number {
+  if (resourceKind === ResourceName.RAM) return 50_000
+  if (resourceKind === 'postgres' || resourceKind === 'mongodb') return 1024
+  return 5000
 }
 
 export async function resolveGlobs(
@@ -37,9 +44,9 @@ export async function resolveGlobs(
         continue
       }
       const mount = registry.mountFor(item.original)
-      if (mount === null || !hasGlob(mount.resource)) {
-        result.push(item)
-        continue
+      if (mount === null) throw new Error(`glob: no mounted path for pattern '${item.original}'`)
+      if (!hasGlob(mount.resource)) {
+        throw new Error(`glob: mount '${mount.prefix}' does not support glob expansion`)
       }
       const prefix = mount.prefix.replace(/\/+$/, '')
       const withPrefix = new PathSpec({
@@ -51,9 +58,31 @@ export async function resolveGlobs(
       })
       try {
         const resolved = await mount.resource.glob([withPrefix], prefix)
-        for (const p of resolved) result.push(p)
-      } catch {
-        result.push(withPrefix)
+        if (resolved.length === 0) {
+          throw new Error(`glob: no matches for pattern '${item.original}'`)
+        }
+        const limit = globResultLimit(mount.resource.kind)
+        if (resolved.length >= limit) {
+          throw new Error(
+            `glob: result limit ${String(limit)} reached for pattern '${item.original}'; narrow the pattern`,
+          )
+        }
+        for (const p of resolved) {
+          const original = posixNormpath(p.original)
+          const lastSlash = original.lastIndexOf('/')
+          result.push(
+            new PathSpec({
+              original,
+              directory: original.slice(0, lastSlash + 1),
+              resolved: true,
+              prefix: p.prefix,
+            }),
+          )
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        if (message.startsWith('glob:')) throw err
+        throw new Error(`glob: failed to expand '${item.original}': ${message}`)
       }
     } else {
       result.push(item)

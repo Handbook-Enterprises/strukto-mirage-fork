@@ -18,7 +18,7 @@ import { CommandSpec } from '../../commands/spec/types.ts'
 import { IOResult } from '../../io/types.ts'
 import type { Resource } from '../../resource/base.ts'
 import { MountMode, PathSpec } from '../../types.ts'
-import { MountRegistry } from './registry.ts'
+import { type AmbiguousCommandError, MountRegistry } from './registry.ts'
 
 class StubResource implements Resource {
   readonly kind = 'stub'
@@ -295,5 +295,103 @@ describe('MountRegistry.resolveMount: cross-mount fallback', () => {
     expect(new TextDecoder().decode(io.stderr as Uint8Array)).toContain(
       'mutate: read-only mount at /b/',
     )
+  })
+
+  it('rejects a strict pathless command with multiple providers', async () => {
+    const reg = new MountRegistry(
+      { '/drive': new RAMStubResource(), '/references': new RAMStubResource() },
+      MountMode.READ,
+    )
+    const strict = command({
+      name: 'provider-read',
+      resource: 'ram',
+      spec: EMPTY_SPEC,
+      fn: NOOP_CMD,
+      mountRouting: 'cwd-or-unique',
+    })[0]
+    if (strict === undefined) throw new Error('missing strict command')
+    reg.mountForPrefix('/drive')?.register(strict)
+    reg.mountForPrefix('/references')?.register(strict)
+    await expect(reg.resolveMount('provider-read', [], '/')).rejects.toEqual(
+      expect.objectContaining<Partial<AmbiguousCommandError>>({
+        name: 'AmbiguousCommandError',
+        mountPrefixes: ['/drive/', '/references/'],
+      }),
+    )
+  })
+
+  it('lets cwd select one provider for a strict command', async () => {
+    const reg = new MountRegistry(
+      { '/drive': new RAMStubResource(), '/references': new RAMStubResource() },
+      MountMode.READ,
+    )
+    const strict = command({
+      name: 'provider-read',
+      resource: 'ram',
+      spec: EMPTY_SPEC,
+      fn: NOOP_CMD,
+      mountRouting: 'cwd-or-unique',
+    })[0]
+    if (strict === undefined) throw new Error('missing strict command')
+    reg.mountForPrefix('/drive')?.register(strict)
+    reg.mountForPrefix('/references')?.register(strict)
+    await expect(reg.resolveMount('provider-read', [], '/drive')).resolves.toBe(
+      reg.mountForPrefix('/drive'),
+    )
+  })
+
+  it('lets a routing path select one provider for a strict command', async () => {
+    const reg = new MountRegistry(
+      { '/drive': new RAMStubResource(), '/references': new RAMStubResource() },
+      MountMode.READ,
+    )
+    const strict = command({
+      name: 'provider-read',
+      resource: 'ram',
+      spec: EMPTY_SPEC,
+      fn: NOOP_CMD,
+      mountRouting: 'cwd-or-unique',
+    })[0]
+    if (strict === undefined) throw new Error('missing strict command')
+    reg.mountForPrefix('/drive')?.register(strict)
+    reg.mountForPrefix('/references')?.register(strict)
+    const viaDrive = new PathSpec({ original: '/drive', directory: '/drive/' })
+    await expect(reg.resolveMount('provider-read', [viaDrive], '/')).resolves.toBe(
+      reg.mountForPrefix('/drive'),
+    )
+  })
+
+  it('preserves legacy first-provider fallback for general commands', async () => {
+    const reg = new MountRegistry(
+      { '/a': new RAMStubResource(), '/longer-prefix': new RAMStubResource() },
+      MountMode.READ,
+    )
+    const general = command({ name: 'seq-like', resource: null, spec: EMPTY_SPEC, fn: NOOP_CMD })[0]
+    if (general === undefined) throw new Error('missing general command')
+    reg.mountForPrefix('/a')?.registerGeneral(general)
+    reg.mountForPrefix('/longer-prefix')?.registerGeneral(general)
+    await expect(reg.resolveMount('seq-like', [], '/')).resolves.toBe(
+      reg.mountForPrefix('/longer-prefix'),
+    )
+  })
+})
+
+describe('MountRegistry.mount command registration', () => {
+  it('keeps only the command variant matching the mounted resource kind', () => {
+    const variants = command({
+      name: 'multi-read',
+      resource: ['gsheets', 'gdrive'],
+      spec: EMPTY_SPEC,
+      fn: NOOP_CMD,
+    })
+    const resource: Resource = {
+      kind: 'gsheets',
+      open: () => Promise.resolve(),
+      close: () => Promise.resolve(),
+      commands: () => variants,
+    }
+    const reg = new MountRegistry({}, MountMode.READ)
+    const mount = reg.mount('/gsheets', resource)
+    expect(mount.resolveCommand('multi-read')?.resource).toBe('gsheets')
   })
 })

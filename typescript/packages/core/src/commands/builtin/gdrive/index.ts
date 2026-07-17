@@ -13,10 +13,9 @@
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
 import type { RegisteredCommand } from '../../config.ts'
-import { ResourceName } from '../../../types.ts'
-import { GDOCS_COMMANDS } from '../gdocs/index.ts'
-import { GSHEETS_COMMANDS } from '../gsheets/index.ts'
-import { GSLIDES_COMMANDS } from '../gslides/index.ts'
+import { GDOCS_GDRIVE_COMMANDS } from '../gdocs/index.ts'
+import { GSHEETS_GDRIVE_COMMANDS } from '../gsheets/index.ts'
+import { GSLIDES_GDRIVE_COMMANDS } from '../gslides/index.ts'
 import { GDRIVE_AWK } from './awk.ts'
 import { GDRIVE_BASE64 } from './base64_cmd.ts'
 import { GDRIVE_BASENAME } from './basename.ts'
@@ -126,9 +125,9 @@ const GDRIVE_NATIVE: readonly RegisteredCommand[] = [
 ]
 
 const GWS_FOR_GDRIVE: readonly RegisteredCommand[] = [
-  ...GDOCS_COMMANDS.filter((c) => c.resource === ResourceName.GDRIVE),
-  ...GSHEETS_COMMANDS.filter((c) => c.resource === ResourceName.GDRIVE),
-  ...GSLIDES_COMMANDS.filter((c) => c.resource === ResourceName.GDRIVE),
+  ...GDOCS_GDRIVE_COMMANDS,
+  ...GSHEETS_GDRIVE_COMMANDS,
+  ...GSLIDES_GDRIVE_COMMANDS,
 ]
 
 export const GDRIVE_COMMANDS: readonly RegisteredCommand[] = [...GDRIVE_NATIVE, ...GWS_FOR_GDRIVE]

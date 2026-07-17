@@ -62,8 +62,12 @@ export const GSHEETS_PROMPT = `{prefix}
     .sheets[0].data[0].rowData[].values[].formattedValue    # cell strings
     .namedRanges[]
 
-  Read commands (alternative to cat for range-scoped reads — lighter):
-    gws-sheets-read --spreadsheet <id> --range Sheet1!A1:C10`
+  Exact-ID read command (run --help for every option):
+    gws-sheets-read --id <id-or-share-url> --list
+    gws-sheets-read --id <id-or-share-url> --tab "Sheet 1"
+    gws-sheets-read --spreadsheet <id> --range Sheet1!A1:C10  # legacy JSON
+    gws-sheets-read --id <id> --range Sheet1!A1:C10 --format csv
+    Use --mount {prefix} when the same command exists on several mounts.`
 
 export const GSHEETS_WRITE_PROMPT = `  Write commands:
     gws-sheets-write \\

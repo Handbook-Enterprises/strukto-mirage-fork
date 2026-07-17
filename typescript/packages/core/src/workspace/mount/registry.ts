@@ -40,6 +40,22 @@ export interface OpsMountInfo {
   mode: MountMode
 }
 
+export class AmbiguousCommandError extends Error {
+  readonly command: string
+  readonly mountPrefixes: readonly string[]
+
+  constructor(command: string, mountPrefixes: readonly string[]) {
+    const sorted = [...mountPrefixes].sort()
+    super(
+      `${command}: ambiguous command provider (${sorted.join(', ')}); ` +
+        `use --mount <prefix> when supported, or cd to the intended mount`,
+    )
+    this.name = 'AmbiguousCommandError'
+    this.command = command
+    this.mountPrefixes = sorted
+  }
+}
+
 export class MountRegistry {
   private readonly mountList: Mount[]
   private defaultMountRef: Mount | null = null
@@ -117,11 +133,7 @@ export class MountRegistry {
     const m = new Mount({ prefix: norm, resource, mode, consistency })
     const cmds = resource.commands?.()
     if (cmds !== undefined) {
-      for (const cmd of cmds) {
-        if (cmd.filetype !== null) m.register(cmd)
-        else if (cmd.resource === null) m.registerGeneral(cmd)
-        else m.register(cmd)
-      }
+      m.registerFns(cmds)
     }
     for (const cmd of GENERAL_COMMANDS) {
       m.registerGeneral(cmd)
@@ -325,6 +337,18 @@ export class MountRegistry {
     return null
   }
 
+  mountsForCommand(cmdName: string): Mount[] {
+    const mounts: Mount[] = []
+    if (this.defaultMountRef !== null && this.defaultMountRef.resolveCommand(cmdName) !== null) {
+      mounts.push(this.defaultMountRef)
+    }
+    for (const m of this.mountList) {
+      if (m.prefix === DEV_PREFIX) continue
+      if (m.resolveCommand(cmdName) !== null) mounts.push(m)
+    }
+    return mounts
+  }
+
   async resolveMount(
     cmdName: string,
     pathScopes: readonly PathSpec[],
@@ -333,7 +357,17 @@ export class MountRegistry {
     const mountPath = pathScopes.length > 0 ? (pathScopes[0]?.original ?? cwd) : cwd
     let mount = this.mountFor(mountPath)
     if (mount?.resolveCommand(cmdName) == null) {
-      mount = this.mountForCommand(cmdName)
+      const candidates = this.mountsForCommand(cmdName)
+      const strict = candidates.some(
+        (candidate) => candidate.resolveCommand(cmdName)?.mountRouting === 'cwd-or-unique',
+      )
+      if (strict && candidates.length > 1) {
+        throw new AmbiguousCommandError(
+          cmdName,
+          candidates.map((candidate) => candidate.prefix),
+        )
+      }
+      mount = candidates[0] ?? null
     }
     if (mount === null) return null
     const defaultMount = this.defaultMountRef

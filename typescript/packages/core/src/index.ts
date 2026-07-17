@@ -745,6 +745,7 @@ export {
   readSpreadsheet as gsheetsReadSpreadsheet,
   readValues as gsheetsReadValues,
   fetchSheetNames as gsheetsFetchSheetNames,
+  parseSpreadsheetId as gsheetsParseSpreadsheetId,
 } from './core/gsheets/read.ts'
 export { readdir as gsheetsReaddir } from './core/gsheets/readdir.ts'
 export { stat as gsheetsStat } from './core/gsheets/stat.ts'

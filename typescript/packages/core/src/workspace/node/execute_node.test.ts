@@ -444,3 +444,17 @@ describe('classifyArgvBySpec — numericShorthand', () => {
     expect(pathSet.has('-3')).toBe(true)
   })
 })
+
+describe('classifyArgvBySpec path-valued options', () => {
+  it('classifies --mount values as routing paths without treating text flags as paths', () => {
+    const spec = new CommandSpec({
+      options: [
+        new Option({ long: '--mount', valueKind: OperandKind.PATH }),
+        new Option({ long: '--id', valueKind: OperandKind.TEXT }),
+      ],
+    })
+    const [textSet, pathSet] = classifyArgvBySpec(spec, ['--mount', '/drive', '--id', 'sheet_123'])
+    expect(pathSet).toEqual(new Set(['/drive']))
+    expect(textSet).toEqual(new Set(['sheet_123']))
+  })
+})

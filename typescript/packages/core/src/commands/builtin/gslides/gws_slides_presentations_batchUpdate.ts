@@ -67,4 +67,5 @@ export const GSLIDES_GWS_BATCH_UPDATE = command({
   resource: [ResourceName.GSLIDES, ResourceName.GDRIVE],
   spec: SPEC,
   fn: gwsSlidesBatchUpdateCommand,
+  write: true,
 })

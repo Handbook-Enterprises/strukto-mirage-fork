@@ -13,6 +13,7 @@
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
 import type { RegisteredCommand } from '../../config.ts'
+import { ResourceName } from '../../../types.ts'
 import { GSHEETS_BASENAME } from './basename.ts'
 import { GSHEETS_CAT } from './cat.ts'
 import { GSHEETS_DIRNAME } from './dirname.ts'
@@ -21,7 +22,7 @@ import { GSHEETS_GREP } from './grep.ts'
 import { GSHEETS_GWS_APPEND } from './gws_sheets_append.ts'
 import { GSHEETS_GWS_BATCH_UPDATE } from './gws_sheets_spreadsheets_batchUpdate.ts'
 import { GSHEETS_GWS_CREATE } from './gws_sheets_spreadsheets_create.ts'
-import { GSHEETS_GWS_READ } from './gws_sheets_read.ts'
+import { GSHEETS_GWS_READ, GSHEETS_GWS_READ_ALIAS } from './gws_sheets_read.ts'
 import { GSHEETS_GWS_WRITE } from './gws_sheets_write.ts'
 import { GSHEETS_HEAD } from './head.ts'
 import { GSHEETS_JQ } from './jq.ts'
@@ -34,7 +35,7 @@ import { GSHEETS_TAIL } from './tail.ts'
 import { GSHEETS_TREE } from './tree.ts'
 import { GSHEETS_WC } from './wc.ts'
 
-export const GSHEETS_COMMANDS: readonly RegisteredCommand[] = [
+const GSHEETS_ALL_COMMANDS: readonly RegisteredCommand[] = [
   ...GSHEETS_BASENAME,
   ...GSHEETS_CAT,
   ...GSHEETS_DIRNAME,
@@ -44,6 +45,7 @@ export const GSHEETS_COMMANDS: readonly RegisteredCommand[] = [
   ...GSHEETS_GWS_BATCH_UPDATE,
   ...GSHEETS_GWS_CREATE,
   ...GSHEETS_GWS_READ,
+  ...GSHEETS_GWS_READ_ALIAS,
   ...GSHEETS_GWS_WRITE,
   ...GSHEETS_HEAD,
   ...GSHEETS_JQ,
@@ -56,3 +58,11 @@ export const GSHEETS_COMMANDS: readonly RegisteredCommand[] = [
   ...GSHEETS_TREE,
   ...GSHEETS_WC,
 ]
+
+export const GSHEETS_COMMANDS = GSHEETS_ALL_COMMANDS.filter(
+  (command) => command.resource === null || command.resource === ResourceName.GSHEETS,
+)
+
+export const GSHEETS_GDRIVE_COMMANDS = GSHEETS_ALL_COMMANDS.filter(
+  (command) => command.resource === ResourceName.GDRIVE,
+)
