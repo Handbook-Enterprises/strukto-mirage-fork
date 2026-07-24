@@ -13,7 +13,13 @@
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { refreshAccessToken, TokenManager } from './_client.ts'
+import {
+  GOOGLE_REQUEST_TIMEOUT_MS,
+  googleGet,
+  googlePost,
+  refreshAccessToken,
+  TokenManager,
+} from './_client.ts'
 
 describe('refreshAccessToken — clientSecret optionality', () => {
   let originalFetch: typeof fetch
@@ -119,5 +125,61 @@ describe('TokenManager.refreshFn delegation', () => {
     await tm.getToken()
     await tm.getToken()
     expect(refreshFn).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('request deadlines — every Google fetch carries an AbortSignal', () => {
+  let originalFetch: typeof fetch
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch
+  })
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+  })
+
+  function stubFetch(): typeof fetch {
+    return vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({}),
+      text: () => Promise.resolve(''),
+    } as unknown as Response) as unknown as typeof fetch
+  }
+
+  function initOf(fakeFetch: typeof fetch, call = 0): RequestInit | undefined {
+    return (fakeFetch as unknown as { mock: { calls: unknown[][] } }).mock.calls[call]?.[1] as
+      | RequestInit
+      | undefined
+  }
+
+  function tokenManager(): TokenManager {
+    return new TokenManager({
+      clientId: 'id',
+      refreshToken: 'rt',
+      refreshFn: () => Promise.resolve({ accessToken: 'tok', expiresIn: 3600 }),
+    })
+  }
+
+  it('googleGet passes a timeout AbortSignal to fetch', async () => {
+    const fakeFetch = stubFetch()
+    globalThis.fetch = fakeFetch
+    await googleGet(tokenManager(), 'https://example.test/x')
+    const init = initOf(fakeFetch)
+    expect(init?.signal).toBeInstanceOf(AbortSignal)
+  })
+
+  it('googlePost passes a timeout AbortSignal to fetch', async () => {
+    const fakeFetch = stubFetch()
+    globalThis.fetch = fakeFetch
+    await googlePost(tokenManager(), 'https://example.test/x', { a: 1 })
+    const init = initOf(fakeFetch)
+    expect(init?.signal).toBeInstanceOf(AbortSignal)
+  })
+
+  it('exposes a finite default deadline constant', () => {
+    expect(GOOGLE_REQUEST_TIMEOUT_MS).toBeGreaterThan(0)
+    expect(Number.isFinite(GOOGLE_REQUEST_TIMEOUT_MS)).toBe(true)
   })
 })
