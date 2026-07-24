@@ -21,6 +21,25 @@ const FIELDS =
   'createdTime,modifiedTime,' +
   'owners,capabilities/canEdit,parents)'
 
+// Total wall-clock budget for a single paginated listing. A folder with
+// tens of thousands of children (or a Drive endpoint that keeps handing
+// back nextPageToken) would otherwise loop forever; this caps the walk and
+// throws a diagnostic naming the folder + pages so the caller fails fast
+// instead of hanging a request for minutes.
+export const LIST_FILES_BUDGET_MS = 20000
+
+function paginationBudgetError(folderId: string, pages: number, elapsedMs: number): Error {
+  return new Error(
+    `listFiles: pagination budget of ${String(LIST_FILES_BUDGET_MS)}ms exceeded for folder ` +
+      `'${folderId}' after ${String(pages)} page(s) (${String(elapsedMs)}ms elapsed); ` +
+      `aborting to avoid an unbounded walk`,
+  )
+}
+
+function escapeDriveQueryValue(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+}
+
 export const MIME_TO_EXT: Readonly<Record<string, string>> = Object.freeze({
   'application/vnd.google-apps.document': '.gdoc.json',
   'application/vnd.google-apps.spreadsheet': '.gsheet.json',
@@ -78,6 +97,8 @@ export async function listFiles(
   const q = parts.join(' and ')
   const files: DriveFile[] = []
   let pageToken: string | null = null
+  const start = Date.now()
+  let pages = 0
   for (;;) {
     const params: Record<string, string | number> = {
       q,
@@ -95,11 +116,44 @@ export async function listFiles(
     if (pageToken !== null) params.pageToken = pageToken
     const url = `${DRIVE_API_BASE}/files`
     const data = (await googleGet(tm, url, params)) as ListResponse
+    pages += 1
     if (data.files !== undefined) files.push(...data.files)
     pageToken = data.nextPageToken ?? null
     if (pageToken === null) break
+    const elapsed = Date.now() - start
+    if (elapsed > LIST_FILES_BUDGET_MS) throw paginationBudgetError(folderId, pages, elapsed)
   }
   return files
+}
+
+// Targeted single-child lookup: one files.list page filtered by exact name
+// AND parent, instead of paginating the whole parent folder. Used by stat's
+// negative-lookup path so "does /folder/child exist?" costs one bounded
+// request even when the parent holds tens of thousands of files. Accepts
+// multiple candidate names (the VFS may append a synthetic extension such as
+// '.gdoc.json' that isn't part of the real Drive name) and OR's them.
+export async function findFileInFolder(
+  tm: TokenManager,
+  folderId: string,
+  names: string | readonly string[],
+  opts: { trashed?: boolean; pageSize?: number } = {},
+): Promise<DriveFile[]> {
+  const trashed = opts.trashed ?? false
+  const pageSize = opts.pageSize ?? 100
+  const nameList = typeof names === 'string' ? [names] : Array.from(new Set(names))
+  const nameClause = nameList.map((n) => `name='${escapeDriveQueryValue(n)}'`).join(' or ')
+  const parts: string[] = [`'${folderId}' in parents`]
+  parts.push(nameList.length > 1 ? `(${nameClause})` : nameClause)
+  if (!trashed) parts.push('trashed=false')
+  const params: Record<string, string | number> = {
+    q: parts.join(' and '),
+    fields: FIELDS,
+    pageSize,
+    supportsAllDrives: 'true',
+    includeItemsFromAllDrives: 'true',
+  }
+  const data = (await googleGet(tm, `${DRIVE_API_BASE}/files`, params)) as ListResponse
+  return data.files ?? []
 }
 
 export async function listAllFiles(
@@ -125,6 +179,8 @@ export async function listAllFiles(
   const q = parts.length > 0 ? parts.join(' and ') : null
   const files: DriveFile[] = []
   let pageToken: string | null = null
+  const start = Date.now()
+  let pages = 0
   for (;;) {
     const params: Record<string, string | number> = {
       fields: FIELDS,
@@ -137,9 +193,12 @@ export async function listAllFiles(
     if (pageToken !== null) params.pageToken = pageToken
     const url = `${DRIVE_API_BASE}/files`
     const data = (await googleGet(tm, url, params)) as ListResponse
+    pages += 1
     if (data.files !== undefined) files.push(...data.files)
     pageToken = data.nextPageToken ?? null
     if (pageToken === null) break
+    const elapsed = Date.now() - start
+    if (elapsed > LIST_FILES_BUDGET_MS) throw paginationBudgetError('(all files)', pages, elapsed)
   }
   return files
 }
