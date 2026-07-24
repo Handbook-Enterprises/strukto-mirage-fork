@@ -64,6 +64,13 @@ export interface JsRuntime {
   addMount(prefix: string): Promise<void>
   removeMount(prefix: string): Promise<void>
   close(): Promise<void>
+  /**
+   * Optional runtime version string, reported by `node --version` / `node -v`.
+   * Hosts whose engine has a meaningful version (e.g. a QuickJS/V8 build) can
+   * expose it; when absent, the `node` command falls back to a generic sandbox
+   * version string so `--version` never resolves as a script path.
+   */
+  version?(): string | Promise<string>
 }
 
 export class JsRuntimeUnavailableError extends Error {

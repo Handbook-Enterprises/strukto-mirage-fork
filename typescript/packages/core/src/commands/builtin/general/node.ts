@@ -22,6 +22,19 @@ import { specOf } from '../../spec/builtins.ts'
 const ENC = new TextEncoder()
 const DEC = new TextDecoder('utf-8', { fatal: false })
 
+// What `node --version` reports when the injected runtime doesn't expose its
+// own version. mirage's `node` is a QuickJS-class sandbox, not real Node, so
+// a generic sandbox string is the honest answer.
+const DEFAULT_RUNTIME_VERSION = 'v20.0.0-quickjs-sandbox'
+
+// `node --version` / `node -v` must print a version and exit, NOT be resolved
+// as a script path. Detect the flag as the first positional argument (a
+// leading `/` may already have been prepended by an upstream resolver).
+function isVersionArg(arg: string): boolean {
+  const bare = arg.startsWith('/') ? arg.slice(1) : arg
+  return bare === '--version' || bare === '-v'
+}
+
 function normalizePosix(p: string): string {
   const parts: string[] = []
   for (const seg of p.split('/')) {
@@ -49,6 +62,14 @@ async function nodeCommand(
   texts: string[],
   opts: CommandOpts,
 ): Promise<CommandFnResult> {
+  const firstArg = paths[0]?.original ?? texts[0] ?? null
+  if (firstArg !== null && isVersionArg(firstArg)) {
+    const runtime = opts.jsRuntime
+    const version =
+      runtime?.version !== undefined ? await runtime.version() : DEFAULT_RUNTIME_VERSION
+    return [ENC.encode(`${version}\n`), new IOResult({ exitCode: 0 })]
+  }
+
   if (opts.execAllowed === false) {
     return [
       null,

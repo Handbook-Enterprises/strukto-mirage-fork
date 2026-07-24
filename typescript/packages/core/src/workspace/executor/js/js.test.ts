@@ -265,4 +265,52 @@ describe('node/js runtime injection', () => {
     expect(stderrStr(io)).toMatch(/js runtime is not available/)
     await ws.close()
   })
+
+  it('`node --version` prints the sandbox runtime version, not a script-path error', async () => {
+    const ws = await makeJsWorkspace()
+    const io = await ws.execute('node --version')
+    expect(io.exitCode).toBe(0)
+    expect(stdoutStr(io).trim()).toBe('v20.0.0-quickjs-sandbox')
+    expect(stderrStr(io)).not.toMatch(/No such file/)
+    await ws.close()
+  })
+
+  it('`node -v` behaves like `--version`', async () => {
+    const ws = await makeJsWorkspace()
+    const io = await ws.execute('node -v')
+    expect(io.exitCode).toBe(0)
+    expect(stdoutStr(io).trim()).toBe('v20.0.0-quickjs-sandbox')
+    await ws.close()
+  })
+
+  it('`--version` works even with no injected runtime (exit 0, not 127)', async () => {
+    const ws = await makeJsWorkspace(false)
+    const io = await ws.execute('node --version')
+    expect(io.exitCode).toBe(0)
+    expect(stdoutStr(io).trim()).toBe('v20.0.0-quickjs-sandbox')
+    await ws.close()
+  })
+
+  it('delegates to the runtime version() when the injected runtime exposes one', async () => {
+    const parser = await getTestParser()
+    const ram = new RAMResource()
+    const registry = new OpsRegistry()
+    registry.registerResource(ram)
+    const ws = new Workspace(
+      { '/ram': ram },
+      {
+        mode: MountMode.EXEC,
+        ops: registry,
+        shellParser: parser,
+        jsRuntimeFactory: (bridge, exec) => {
+          const base = makeFakeRuntime(bridge, exec)
+          return { ...base, version: () => 'v42.7.0-custom' }
+        },
+      },
+    )
+    const io = await ws.execute('node --version')
+    expect(io.exitCode).toBe(0)
+    expect(stdoutStr(io).trim()).toBe('v42.7.0-custom')
+    await ws.close()
+  })
 })
