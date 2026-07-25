@@ -18,6 +18,7 @@ import { IndexEntry } from '../../cache/index/config.ts'
 import type { IndexCacheStore } from '../../cache/index/store.ts'
 import { PathSpec } from '../../types.ts'
 import { MIME_TO_EXT, listFiles } from '../google/drive.ts'
+import type { DriveFile } from '../google/drive.ts'
 
 const FOLDER_MIME = 'application/vnd.google-apps.folder'
 const DOC_MIME = 'application/vnd.google-apps.document'
@@ -30,6 +31,33 @@ function resourceTypeFor(mime: string): string {
   if (mime === SHEET_MIME) return 'gdrive/gsheet'
   if (mime === SLIDE_MIME) return 'gdrive/gslide'
   return 'gdrive/file'
+}
+
+export interface DriveVfsEntry {
+  name: string
+  entry: IndexEntry
+  isDir: boolean
+}
+
+// Single source of truth for turning a raw Drive file into the VFS name +
+// cache entry, so readdir (bulk listing) and stat (targeted single-child
+// lookup) derive identical vfsName/resourceType/size for the same file.
+export function driveFileToEntry(f: DriveFile): DriveVfsEntry {
+  const mime = f.mimeType ?? ''
+  const ext = MIME_TO_EXT[mime] ?? ''
+  const filename = ext !== '' ? `${f.name}${ext}` : f.name
+  const isDir = mime === FOLDER_MIME
+  const sizeRaw = f.size ?? f.quotaBytesUsed ?? '0'
+  const sizeNum = Number.parseInt(sizeRaw, 10)
+  const entry = new IndexEntry({
+    id: f.id,
+    name: f.name,
+    resourceType: resourceTypeFor(mime),
+    remoteTime: f.modifiedTime ?? '',
+    vfsName: filename,
+    size: Number.isFinite(sizeNum) && sizeNum > 0 ? sizeNum : null,
+  })
+  return { name: filename, entry, isDir }
 }
 
 export async function readdir(...args: Parameters<typeof readdirImpl>): Promise<string[]> {
@@ -99,24 +127,7 @@ async function readdirImpl(
   }
 
   const files = await listFiles(accessor.tokenManager, { folderId })
-  const entries: { name: string; entry: IndexEntry; isDir: boolean }[] = []
-  for (const f of files) {
-    const mime = f.mimeType ?? ''
-    const ext = MIME_TO_EXT[mime] ?? ''
-    const filename = ext !== '' ? `${f.name}${ext}` : f.name
-    const isDir = mime === FOLDER_MIME
-    const sizeRaw = f.size ?? f.quotaBytesUsed ?? '0'
-    const sizeNum = Number.parseInt(sizeRaw, 10)
-    const entry = new IndexEntry({
-      id: f.id,
-      name: f.name,
-      resourceType: resourceTypeFor(mime),
-      remoteTime: f.modifiedTime ?? '',
-      vfsName: filename,
-      size: Number.isFinite(sizeNum) && sizeNum > 0 ? sizeNum : null,
-    })
-    entries.push({ name: filename, entry, isDir })
-  }
+  const entries: DriveVfsEntry[] = files.map(driveFileToEntry)
 
   if (index !== undefined) {
     await index.setDir(

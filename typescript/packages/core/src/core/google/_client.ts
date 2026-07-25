@@ -22,6 +22,18 @@ export const SHEETS_API_BASE = 'https://sheets.googleapis.com/v4'
 export const GMAIL_API_BASE = 'https://gmail.googleapis.com/gmail/v1'
 export const TOKEN_BUFFER_SECONDS = 300
 
+// Wall-clock deadline for every individual Google API fetch. Without a
+// signal, a stalled connection (DNS black-hole, half-open socket, a Drive
+// endpoint that never responds) hangs the caller forever — the root cause
+// of ve-brain's minutes-long /sessions stalls. AbortSignal.timeout gives
+// each request a hard ceiling; a caller may still pass its own signal to
+// override (e.g. to thread a shorter budget or a shared cancellation).
+export const GOOGLE_REQUEST_TIMEOUT_MS = 15000
+
+export function withGoogleTimeout(init?: RequestInit): RequestInit {
+  return { ...init, signal: init?.signal ?? AbortSignal.timeout(GOOGLE_REQUEST_TIMEOUT_MS) }
+}
+
 export class GoogleApiError extends Error {
   readonly status: number
   constructor(message: string, status: number) {
@@ -40,11 +52,14 @@ export async function refreshAccessToken(config: GoogleConfig): Promise<[string,
   if (config.clientSecret !== undefined && config.clientSecret !== '') {
     body.set('client_secret', config.clientSecret)
   }
-  const r = await fetch(TOKEN_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
-  })
+  const r = await fetch(
+    TOKEN_URL,
+    withGoogleTimeout({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    }),
+  )
   if (!r.ok) {
     const text = await r.text().catch(() => '')
     throw new GoogleApiError(`Google token refresh → ${String(r.status)} ${text}`, r.status)
@@ -111,7 +126,7 @@ export async function googleGet(
   params?: Record<string, string | number>,
 ): Promise<unknown> {
   const headers = await googleHeaders(tm)
-  const r = await fetch(buildUrl(url, params), { headers })
+  const r = await fetch(buildUrl(url, params), withGoogleTimeout({ headers }))
   if (!r.ok) {
     const text = await r.text().catch(() => '')
     throw new GoogleApiError(`Google GET ${url} → ${String(r.status)} ${text}`, r.status)
@@ -121,11 +136,14 @@ export async function googleGet(
 
 export async function googlePost(tm: TokenManager, url: string, json: unknown): Promise<unknown> {
   const headers = await googleHeaders(tm)
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify(json),
-  })
+  const r = await fetch(
+    url,
+    withGoogleTimeout({
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(json),
+    }),
+  )
   if (!r.ok) {
     const text = await r.text().catch(() => '')
     throw new GoogleApiError(`Google POST ${url} → ${String(r.status)} ${text}`, r.status)
@@ -135,11 +153,14 @@ export async function googlePost(tm: TokenManager, url: string, json: unknown): 
 
 export async function googlePut(tm: TokenManager, url: string, json: unknown): Promise<unknown> {
   const headers = await googleHeaders(tm)
-  const r = await fetch(url, {
-    method: 'PUT',
-    headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify(json),
-  })
+  const r = await fetch(
+    url,
+    withGoogleTimeout({
+      method: 'PUT',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(json),
+    }),
+  )
   if (!r.ok) {
     const text = await r.text().catch(() => '')
     throw new GoogleApiError(`Google PUT ${url} → ${String(r.status)} ${text}`, r.status)
@@ -149,7 +170,7 @@ export async function googlePut(tm: TokenManager, url: string, json: unknown): P
 
 export async function googleGetBytes(tm: TokenManager, url: string): Promise<Uint8Array> {
   const headers = await googleHeaders(tm)
-  const r = await fetch(url, { headers, redirect: 'follow' })
+  const r = await fetch(url, withGoogleTimeout({ headers, redirect: 'follow' }))
   if (!r.ok) {
     const text = await r.text().catch(() => '')
     throw new GoogleApiError(`Google GET ${url} → ${String(r.status)} ${text}`, r.status)
@@ -160,7 +181,7 @@ export async function googleGetBytes(tm: TokenManager, url: string): Promise<Uin
 
 export async function* googleGetStream(tm: TokenManager, url: string): AsyncIterable<Uint8Array> {
   const headers = await googleHeaders(tm)
-  const r = await fetch(url, { headers, redirect: 'follow' })
+  const r = await fetch(url, withGoogleTimeout({ headers, redirect: 'follow' }))
   if (!r.ok) {
     const text = await r.text().catch(() => '')
     throw new GoogleApiError(`Google GET ${url} → ${String(r.status)} ${text}`, r.status)

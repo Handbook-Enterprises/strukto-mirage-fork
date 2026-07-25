@@ -13,14 +13,76 @@
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
 import type { GDriveAccessor } from '../../accessor/gdrive.ts'
+import type { IndexEntry } from '../../cache/index/config.ts'
 import type { IndexCacheStore } from '../../cache/index/store.ts'
 import { FileStat, FileType, PathSpec } from '../../types.ts'
-import { readdir as coreReaddir } from './readdir.ts'
+import { MIME_TO_EXT, findFileInFolder } from '../google/drive.ts'
+import { driveFileToEntry, readdir as coreReaddir } from './readdir.ts'
+
+const WORKSPACE_EXTS: readonly string[] = Object.values(MIME_TO_EXT)
 
 function enoent(p: string): Error & { code: string } {
   const e = new Error(`ENOENT: ${p}`) as Error & { code: string }
   e.code = 'ENOENT'
   return e
+}
+
+// Candidate real Drive names for a requested VFS leaf. readdir appends a
+// synthetic extension to Workspace files (a Doc named "Report" surfaces as
+// "Report.gdoc.json"), so the targeted files.list query must probe both the
+// raw leaf and its de-extensioned base.
+function driveNameCandidates(leaf: string): string[] {
+  const candidates = [leaf]
+  for (const ext of WORKSPACE_EXTS) {
+    if (leaf.endsWith(ext)) candidates.push(leaf.slice(0, leaf.length - ext.length))
+  }
+  return candidates
+}
+
+// Resolve the parent folder id WITHOUT a network listing: the mount root
+// maps to the accessor's rootScope, and any warm subfolder already has its
+// id in the index. Returns null when the parent id can't be determined from
+// local state, which is the signal to fall back to a full parent listing.
+async function resolveParentFolderId(
+  accessor: GDriveAccessor,
+  parentVirtual: string,
+  prefix: string,
+  index: IndexCacheStore,
+): Promise<string | null> {
+  let rel = parentVirtual
+  if (prefix !== '' && rel.startsWith(prefix)) rel = rel.slice(prefix.length) || '/'
+  const parentKey = rel.replace(/^\/+|\/+$/g, '')
+  if (parentKey === '') {
+    const scope = accessor.rootScope
+    if (scope.type === 'my_drive') return 'root'
+    return scope.id !== undefined && scope.id !== '' ? scope.id : null
+  }
+  const parentResult = await index.get(parentVirtual)
+  const parentEntry = parentResult.entry
+  if (parentEntry === undefined || parentEntry === null) return null
+  if (parentEntry.resourceType !== 'gdrive/folder') return null
+  return parentEntry.id
+}
+
+async function targetedLookup(
+  accessor: GDriveAccessor,
+  virtualKey: string,
+  parentVirtual: string,
+  prefix: string,
+  index: IndexCacheStore,
+): Promise<IndexEntry | null> {
+  const folderId = await resolveParentFolderId(accessor, parentVirtual, prefix, index)
+  if (folderId === null) return null
+  const leaf = virtualKey.slice(virtualKey.lastIndexOf('/') + 1)
+  const matches = await findFileInFolder(accessor.tokenManager, folderId, driveNameCandidates(leaf))
+  for (const f of matches) {
+    const mapped = driveFileToEntry(f)
+    if (mapped.name === leaf) {
+      await index.put(virtualKey, mapped.entry)
+      return mapped.entry
+    }
+  }
+  return null
 }
 
 function guessType(name: string): FileType {
@@ -53,7 +115,6 @@ export async function stat(
   path: PathSpec,
   index?: IndexCacheStore,
 ): Promise<FileStat> {
-  void accessor
   const prefix = path.prefix
   let p = path.original
   if (prefix !== '' && p.startsWith(prefix)) p = p.slice(prefix.length) || '/'
@@ -67,42 +128,61 @@ export async function stat(
     const parentVirtual = virtualKey.includes('/')
       ? virtualKey.slice(0, virtualKey.lastIndexOf('/')) || '/'
       : '/'
-    try {
-      await coreReaddir(
-        accessor,
-        new PathSpec({
-          original: parentVirtual,
-          directory: parentVirtual,
-          resolved: false,
-          prefix,
-        }),
-        index,
-      )
-    } catch {
-      // parent listing failed — fall through
-    }
-    result = await index.get(virtualKey)
-    if (result.entry === undefined || result.entry === null) {
-      throw enoent(path.original)
+    // Fast negative lookup: a single targeted files.list (name= AND
+    // parent=) instead of walking the entire parent folder. This turns a
+    // missing-path stat on a warm parent from a multi-page network walk
+    // (the /sessions minutes-long stall) into one bounded request. Only when
+    // the parent id can't be resolved locally do we fall back to a full
+    // parent listing, which recursively resolves ancestor ids as before.
+    const targeted = await targetedLookup(accessor, virtualKey, parentVirtual, prefix, index)
+    if (targeted !== null) {
+      result = { entry: targeted }
+    } else {
+      const parentFolderId = await resolveParentFolderId(accessor, parentVirtual, prefix, index)
+      if (parentFolderId !== null) {
+        // Parent id was resolvable and the targeted query found nothing:
+        // the child does not exist. Fail fast without listing the parent.
+        throw enoent(path.original)
+      }
+      try {
+        await coreReaddir(
+          accessor,
+          new PathSpec({
+            original: parentVirtual,
+            directory: parentVirtual,
+            resolved: false,
+            prefix,
+          }),
+          index,
+        )
+      } catch {
+        // parent listing failed — fall through
+      }
+      result = await index.get(virtualKey)
+      if (result.entry === undefined || result.entry === null) {
+        throw enoent(path.original)
+      }
     }
   }
-  if (result.entry.resourceType === 'gdrive/folder') {
+  const entry = result.entry
+  if (entry === undefined || entry === null) throw enoent(path.original)
+  if (entry.resourceType === 'gdrive/folder') {
     return new FileStat({
-      name: result.entry.vfsName !== '' ? result.entry.vfsName : result.entry.name,
+      name: entry.vfsName !== '' ? entry.vfsName : entry.name,
       type: FileType.DIRECTORY,
-      modified: result.entry.remoteTime,
-      extra: { file_id: result.entry.id },
+      modified: entry.remoteTime,
+      extra: { file_id: entry.id },
     })
   }
   return new FileStat({
-    name: result.entry.vfsName !== '' ? result.entry.vfsName : result.entry.name,
-    size: result.entry.size,
-    type: guessType(result.entry.vfsName),
-    modified: result.entry.remoteTime,
-    fingerprint: result.entry.remoteTime !== '' ? result.entry.remoteTime : null,
+    name: entry.vfsName !== '' ? entry.vfsName : entry.name,
+    size: entry.size,
+    type: guessType(entry.vfsName),
+    modified: entry.remoteTime,
+    fingerprint: entry.remoteTime !== '' ? entry.remoteTime : null,
     extra: {
-      file_id: result.entry.id,
-      resource_type: result.entry.resourceType,
+      file_id: entry.id,
+      resource_type: entry.resourceType,
     },
   })
 }

@@ -12,7 +12,12 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { SHEETS_API_BASE, type TokenManager, googleHeaders } from '../google/_client.ts'
+import {
+  SHEETS_API_BASE,
+  type TokenManager,
+  googleHeaders,
+  withGoogleTimeout,
+} from '../google/_client.ts'
 
 export class SheetsApiError extends Error {
   readonly status: number
@@ -38,11 +43,14 @@ export async function writeValues(
   }
   const url = `${SHEETS_API_BASE}/spreadsheets/${spreadsheetId}/values/${range}?valueInputOption=USER_ENTERED`
   const headers = await googleHeaders(tm)
-  const r = await fetch(url, {
-    method: 'PUT',
-    headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ values }),
-  })
+  const r = await fetch(
+    url,
+    withGoogleTimeout({
+      method: 'PUT',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values }),
+    }),
+  )
   if (!r.ok) {
     const text = await r.text().catch(() => '')
     throw new SheetsApiError(`Sheets PUT ${url} → ${String(r.status)} ${text}`, r.status)
@@ -65,11 +73,14 @@ export async function appendValues(
   }
   const url = `${SHEETS_API_BASE}/spreadsheets/${spreadsheetId}/values/${range}:append?valueInputOption=USER_ENTERED`
   const headers = await googleHeaders(tm)
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ values }),
-  })
+  const r = await fetch(
+    url,
+    withGoogleTimeout({
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values }),
+    }),
+  )
   if (!r.ok) {
     const text = await r.text().catch(() => '')
     throw new SheetsApiError(`Sheets POST ${url} → ${String(r.status)} ${text}`, r.status)
