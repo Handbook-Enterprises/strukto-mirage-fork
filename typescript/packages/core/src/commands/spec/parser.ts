@@ -27,9 +27,16 @@ export function parseCommand(spec: CommandSpec, argv: string[], cwd: string): Pa
   const longBoolFlags = new Set<string>()
   const longValueFlags = new Set<string>()
   const valueFlagKinds = new Map<string, OperandKind>()
+  const tupleFlags = new Map<string, { arity: number; pathIndices: readonly number[] }>()
   let numericShorthandFlag: string | null = null
 
   for (const opt of spec.options) {
+    if (opt.arity > 1) {
+      const info = { arity: opt.arity, pathIndices: opt.tuplePathIndices }
+      if (opt.short !== null) tupleFlags.set(opt.short, info)
+      if (opt.long !== null) tupleFlags.set(opt.long, info)
+      continue
+    }
     if (opt.short !== null) {
       if (opt.valueKind === OperandKind.NONE) {
         boolFlags.add(opt.short)
@@ -76,6 +83,8 @@ export function parseCommand(spec: CommandSpec, argv: string[], cwd: string): Pa
   }
 
   const flags: Record<string, string | boolean> = {}
+  const tupleAccum: Record<string, string[][]> = {}
+  const tuplePathValues: string[] = []
   const rawArgs: string[] = []
   i = 0
   let endOfFlags = false
@@ -94,6 +103,29 @@ export function parseCommand(spec: CommandSpec, argv: string[], cwd: string): Pa
       rawArgs.push(tok)
       i += 1
       continue
+    }
+
+    const tupleInfo = tupleFlags.get(tok)
+    if (tupleInfo !== undefined && i + tupleInfo.arity < filteredArgv.length + 1) {
+      const values: string[] = []
+      for (let k = 1; k <= tupleInfo.arity; k++) {
+        const v = filteredArgv[i + k]
+        if (v === undefined) break
+        values.push(v)
+      }
+      if (values.length === tupleInfo.arity) {
+        for (const idx of tupleInfo.pathIndices) {
+          const raw = values[idx]
+          if (raw !== undefined) {
+            const resolved = resolvePath(cwd, raw)
+            values[idx] = resolved
+            tuplePathValues.push(resolved)
+          }
+        }
+        ;(tupleAccum[tok] ??= []).push(values)
+        i += tupleInfo.arity + 1
+        continue
+      }
     }
 
     if (tok.startsWith('--')) {
@@ -180,7 +212,7 @@ export function parseCommand(spec: CommandSpec, argv: string[], cwd: string): Pa
     }
   }
 
-  const pathFlagValues: string[] = []
+  const pathFlagValues: string[] = [...tuplePathValues]
   for (const [flagName, kind] of valueFlagKinds) {
     if (kind === OperandKind.PATH && flagName in flags) {
       const val = flags[flagName]
@@ -190,6 +222,10 @@ export function parseCommand(spec: CommandSpec, argv: string[], cwd: string): Pa
         pathFlagValues.push(resolved)
       }
     }
+  }
+
+  for (const [flagName, tuples] of Object.entries(tupleAccum)) {
+    flags[flagName] = JSON.stringify(tuples)
   }
 
   return new ParsedArgs({ flags, args: classified, cachePaths, pathFlagValues })

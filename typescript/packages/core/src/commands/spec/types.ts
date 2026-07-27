@@ -26,6 +26,8 @@ export interface OptionInit {
   valueKind?: OperandKind
   numericShorthand?: boolean
   description?: string
+  arity?: number
+  tuplePathIndices?: readonly number[]
 }
 
 export class Option {
@@ -34,6 +36,15 @@ export class Option {
   readonly valueKind: OperandKind
   readonly numericShorthand: boolean
   readonly description: string | null
+  // Number of values this option consumes per occurrence. Options with
+  // arity > 1 are repeatable and collected as a JSON-encoded list of
+  // value-tuples under the flag's key (e.g. jq's `--arg name value`), since
+  // the flat flags record cannot hold a list of tuples directly.
+  readonly arity: number
+  // Which value positions within each tuple are filesystem paths (resolved
+  // against cwd and surfaced in routingPaths), e.g. `--rawfile name file`
+  // has its second value (index 1) as a path.
+  readonly tuplePathIndices: readonly number[]
 
   constructor(init: OptionInit = {}) {
     this.short = init.short ?? null
@@ -41,6 +52,8 @@ export class Option {
     this.valueKind = init.valueKind ?? OperandKind.NONE
     this.numericShorthand = init.numericShorthand ?? false
     this.description = init.description ?? null
+    this.arity = init.arity ?? 1
+    this.tuplePathIndices = init.tuplePathIndices ?? []
     Object.freeze(this)
   }
 }
