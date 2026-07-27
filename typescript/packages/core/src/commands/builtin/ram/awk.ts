@@ -19,6 +19,7 @@ import { IOResult, materialize } from '../../../io/types.ts'
 import { PathSpec, ResourceName } from '../../../types.ts'
 import { command, type CommandFnResult, type CommandOpts } from '../../config.ts'
 import { specOf } from '../../spec/builtins.ts'
+import { validateAwkProgram } from '../utils/awk_program.ts'
 import { resolveSource } from '../utils/stream.ts'
 
 const ENC = new TextEncoder()
@@ -270,6 +271,10 @@ async function awkCommand(
         stderr: ENC.encode(`awk: usage: awk [-F fs] [-v var=val] 'program' [file ...]\n`),
       }),
     ]
+  }
+  const programError = validateAwkProgram(program)
+  if (programError !== null) {
+    return [null, new IOResult({ exitCode: 1, stderr: ENC.encode(`${programError}\n`) })]
   }
   const fs = typeof opts.flags.F === 'string' ? opts.flags.F : ' '
   const variables: Record<string, string> = {}
