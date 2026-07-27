@@ -404,9 +404,37 @@ export const BUILTIN_SPECS: Readonly<Record<string, CommandSpec>> = Object.freez
   }),
   jq: new CommandSpec({
     options: [
-      new Option({ short: '-r' }),
-      new Option({ short: '-c' }),
-      new Option({ short: '-s' }),
+      new Option({ short: '-r', long: '--raw-output', description: 'Output raw strings.' }),
+      new Option({ short: '-c', long: '--compact-output', description: 'Compact JSON output.' }),
+      new Option({
+        short: '-s',
+        long: '--slurp',
+        description: 'Read the entire input stream into a single array.',
+      }),
+      new Option({
+        short: '-n',
+        long: '--null-input',
+        description: "Use null as the single input value; don't read input.",
+      }),
+      new Option({
+        long: '--arg',
+        valueKind: OperandKind.TEXT,
+        arity: 2,
+        description: 'Bind $name to the string value: --arg name value.',
+      }),
+      new Option({
+        long: '--argjson',
+        valueKind: OperandKind.TEXT,
+        arity: 2,
+        description: 'Bind $name to the JSON value: --argjson name json.',
+      }),
+      new Option({
+        long: '--rawfile',
+        valueKind: OperandKind.TEXT,
+        arity: 2,
+        tuplePathIndices: [1],
+        description: "Bind $name to the file's contents as a string: --rawfile name file.",
+      }),
     ],
     positional: [new Operand({ kind: OperandKind.TEXT })],
     rest: new Operand({ kind: OperandKind.PATH }),

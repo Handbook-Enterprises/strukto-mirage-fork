@@ -32,8 +32,17 @@ function hasTopLevelSpread(expr: string): boolean {
   return false
 }
 
-export async function jqEval(obj: unknown, expr: string): Promise<unknown> {
-  const result = await jqWasm.raw(JSON.stringify(obj), expr, ['-c'])
+export async function jqEval(
+  obj: unknown,
+  expr: string,
+  extraFlags: readonly string[] = [],
+): Promise<unknown> {
+  // `-c` is always forwarded so stdout is one compact JSON value per line,
+  // which this function parses back into JS values; the -r/-c/-s *output*
+  // formatting is applied afterwards by formatJqOutput. extraFlags carries
+  // the eval-affecting jq flags (-n, --arg, --argjson, and --rawfile lowered
+  // to --arg), which change evaluation but not the line-oriented serialization.
+  const result = await jqWasm.raw(JSON.stringify(obj), expr, ['-c', ...extraFlags])
   if (result.exitCode !== 0) {
     throw new Error(result.stderr || `jq exited with code ${String(result.exitCode)}`)
   }
