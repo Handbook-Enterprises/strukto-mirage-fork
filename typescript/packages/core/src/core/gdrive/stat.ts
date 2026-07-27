@@ -13,76 +13,15 @@
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
 import type { GDriveAccessor } from '../../accessor/gdrive.ts'
-import type { IndexEntry } from '../../cache/index/config.ts'
 import type { IndexCacheStore } from '../../cache/index/store.ts'
 import { FileStat, FileType, PathSpec } from '../../types.ts'
-import { MIME_TO_EXT, findFileInFolder } from '../google/drive.ts'
-import { driveFileToEntry, readdir as coreReaddir } from './readdir.ts'
-
-const WORKSPACE_EXTS: readonly string[] = Object.values(MIME_TO_EXT)
+import { readdir as coreReaddir } from './readdir.ts'
+import { resolveParentFolderId, targetedLookup } from './resolve.ts'
 
 function enoent(p: string): Error & { code: string } {
   const e = new Error(`ENOENT: ${p}`) as Error & { code: string }
   e.code = 'ENOENT'
   return e
-}
-
-// Candidate real Drive names for a requested VFS leaf. readdir appends a
-// synthetic extension to Workspace files (a Doc named "Report" surfaces as
-// "Report.gdoc.json"), so the targeted files.list query must probe both the
-// raw leaf and its de-extensioned base.
-function driveNameCandidates(leaf: string): string[] {
-  const candidates = [leaf]
-  for (const ext of WORKSPACE_EXTS) {
-    if (leaf.endsWith(ext)) candidates.push(leaf.slice(0, leaf.length - ext.length))
-  }
-  return candidates
-}
-
-// Resolve the parent folder id WITHOUT a network listing: the mount root
-// maps to the accessor's rootScope, and any warm subfolder already has its
-// id in the index. Returns null when the parent id can't be determined from
-// local state, which is the signal to fall back to a full parent listing.
-async function resolveParentFolderId(
-  accessor: GDriveAccessor,
-  parentVirtual: string,
-  prefix: string,
-  index: IndexCacheStore,
-): Promise<string | null> {
-  let rel = parentVirtual
-  if (prefix !== '' && rel.startsWith(prefix)) rel = rel.slice(prefix.length) || '/'
-  const parentKey = rel.replace(/^\/+|\/+$/g, '')
-  if (parentKey === '') {
-    const scope = accessor.rootScope
-    if (scope.type === 'my_drive') return 'root'
-    return scope.id !== undefined && scope.id !== '' ? scope.id : null
-  }
-  const parentResult = await index.get(parentVirtual)
-  const parentEntry = parentResult.entry
-  if (parentEntry === undefined || parentEntry === null) return null
-  if (parentEntry.resourceType !== 'gdrive/folder') return null
-  return parentEntry.id
-}
-
-async function targetedLookup(
-  accessor: GDriveAccessor,
-  virtualKey: string,
-  parentVirtual: string,
-  prefix: string,
-  index: IndexCacheStore,
-): Promise<IndexEntry | null> {
-  const folderId = await resolveParentFolderId(accessor, parentVirtual, prefix, index)
-  if (folderId === null) return null
-  const leaf = virtualKey.slice(virtualKey.lastIndexOf('/') + 1)
-  const matches = await findFileInFolder(accessor.tokenManager, folderId, driveNameCandidates(leaf))
-  for (const f of matches) {
-    const mapped = driveFileToEntry(f)
-    if (mapped.name === leaf) {
-      await index.put(virtualKey, mapped.entry)
-      return mapped.entry
-    }
-  }
-  return null
 }
 
 function guessType(name: string): FileType {

@@ -17,7 +17,12 @@ import type * as DriveModule from '../google/drive.ts'
 
 vi.mock('../google/drive.ts', async () => {
   const actual = await vi.importActual<typeof DriveModule>('../google/drive.ts')
-  return { ...actual, listFiles: vi.fn(), downloadFile: vi.fn() }
+  return {
+    ...actual,
+    listFiles: vi.fn(),
+    downloadFile: vi.fn(),
+    findFileInFolder: vi.fn(() => Promise.resolve([])),
+  }
 })
 
 import { GDriveAccessor } from '../../accessor/gdrive.ts'
@@ -77,5 +82,36 @@ describe('gdrive read auto-bootstrap', () => {
     const index = new RAMIndexCacheStore()
     const path = new PathSpec({ original: '/missing.txt', directory: '/missing.txt' })
     await expect(read(accessor, path, index)).rejects.toThrow(/ENOENT/)
+  })
+
+  // BLU-1451: `cp`/`mv` dispatch `read` on the source. A source that exists
+  // live on Drive but is absent from a cold/stale index (or whose parent
+  // listing is still eventually consistent) must still resolve, matching
+  // `stat`'s targeted live lookup. Simulate the stale index: the entry is
+  // absent from the index, the parent re-listing (listFiles) does NOT
+  // surface it, but the targeted live files.list (findFileInFolder) does.
+  it('resolves a source present live but absent from the index (stat/read parity)', async () => {
+    // Parent re-listing is stale — it does not contain the file.
+    vi.mocked(drive.listFiles).mockResolvedValue([])
+    // Targeted live lookup (name= + parent=) finds it, exactly as stat does.
+    vi.mocked(drive.findFileInFolder).mockResolvedValue([
+      {
+        id: 'live1',
+        name: 'fresh.json',
+        mimeType: 'application/json',
+        modifiedTime: '2026-04-01T00:00:00.000Z',
+      },
+    ])
+    vi.mocked(drive.downloadFile).mockResolvedValue(new TextEncoder().encode('{"ok":true}'))
+
+    const accessor = makeAccessor()
+    const index = new RAMIndexCacheStore()
+    const path = new PathSpec({ original: '/fresh.json', directory: '/fresh.json' })
+    const out = await read(accessor, path, index)
+    // Without the targeted live lookup this read throws ENOENT (listFiles,
+    // the parent re-listing, is empty), so a successful decode is proof the
+    // live path resolved the source.
+    expect(new TextDecoder().decode(out)).toBe('{"ok":true}')
+    expect(drive.findFileInFolder).toHaveBeenCalled()
   })
 })
