@@ -21,6 +21,7 @@ import { readSpreadsheet } from '../gsheets/read.ts'
 import { readPresentation } from '../gslides/read.ts'
 import type { TokenManager } from '../google/_client.ts'
 import { readdir } from './readdir.ts'
+import { targetedLookup } from './resolve.ts'
 
 function enoent(p: string): Error {
   const e = new Error(`ENOENT: ${p}`) as Error & { code: string }
@@ -50,6 +51,25 @@ export async function read(
   if (index === undefined) throw enoent(path.original)
   const virtualKey = prefix !== '' ? `${prefix}/${key}` : `/${key}`
   let result = await index.get(virtualKey)
+  if (result.entry === undefined || result.entry === null) {
+    // Index miss. `stat` resolves this with a targeted live files.list
+    // (name= AND parent=) so a file that exists on Drive but is absent from
+    // the (cold or stale) index still resolves. `read` must do the same or
+    // it diverges from `stat`: BLU-1451 saw `cp`/`mv` (which dispatch
+    // `read`) fail with a not-found error on a source whose `stat` had just
+    // succeeded, whenever Drive's parent listing was still eventually
+    // consistent. Try the same targeted lookup first; on any error fall
+    // through to the full parent re-listing below.
+    const parentVirtual = virtualKey.includes('/')
+      ? virtualKey.slice(0, virtualKey.lastIndexOf('/')) || '/'
+      : '/'
+    try {
+      const targeted = await targetedLookup(accessor, virtualKey, parentVirtual, prefix, index)
+      if (targeted !== null) result = { entry: targeted }
+    } catch {
+      // targeted live lookup failed; fall through to full parent listing
+    }
+  }
   if (result.entry === undefined || result.entry === null) {
     const parentKey = virtualKey.replace(/\/+$/, '').replace(/\/[^/]+$/, '') || '/'
     if (parentKey !== virtualKey) {
