@@ -74,6 +74,62 @@ async function doFetch(url: string, options: HttpRequestOptions): Promise<Uint8A
   }
 }
 
+export interface HttpExchange {
+  status: number
+  statusText: string
+  /** Final URL after redirects. */
+  url: string
+  headers: [string, string][]
+  body: Uint8Array
+}
+
+/**
+ * One HTTP exchange that reports the status instead of throwing on non-2xx,
+ * for callers that need curl semantics (print the error body, -f, -w).
+ */
+export async function httpExchange(
+  url: string,
+  options: Omit<HttpRequestOptions, 'body'> & {
+    body?: Uint8Array | FormData
+    /** curl `-H 'User-Agent:'`: send no User-Agent at all. */
+    omitUserAgent?: boolean
+  } = {},
+): Promise<HttpExchange> {
+  const method = options.method ?? 'GET'
+  const target =
+    options.jina === true && method === 'GET' && options.body === undefined ? toJinaUrl(url) : url
+  const controller = new AbortController()
+  const timer = setTimeout(() => {
+    controller.abort()
+  }, options.timeoutMs ?? 30_000)
+  try {
+    const init: RequestInit = {
+      method,
+      headers: {
+        ...(options.omitUserAgent === true ? {} : { 'User-Agent': DEFAULT_USER_AGENT }),
+        ...(options.headers ?? {}),
+      },
+      signal: controller.signal,
+      redirect: options.followRedirects === false ? 'manual' : 'follow',
+    }
+    if (options.body !== undefined) init.body = options.body as BodyInit
+    const resp = await fetch(applyProxy(target), init)
+    const headers: [string, string][] = []
+    resp.headers.forEach((value, name) => {
+      headers.push([name, value])
+    })
+    return {
+      status: resp.status,
+      statusText: resp.statusText,
+      url: resp.url !== '' ? resp.url : target,
+      headers,
+      body: new Uint8Array(await resp.arrayBuffer()),
+    }
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 export function httpRequest(url: string, options: HttpRequestOptions = {}): Promise<Uint8Array> {
   const method = options.method ?? 'GET'
   const resolved =

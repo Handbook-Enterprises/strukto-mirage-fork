@@ -346,44 +346,16 @@ export const BUILTIN_SPECS: Readonly<Record<string, CommandSpec>> = Object.freez
     positional: [new Operand({ kind: OperandKind.TEXT }), new Operand({ kind: OperandKind.TEXT })],
     rest: new Operand({ kind: OperandKind.PATH }),
   }),
+  // curl parses its own argv (commands/builtin/general/curl.ts): every token
+  // reaches the command in order, so no flag can shift into the URL slot.
   curl: new CommandSpec({
-    description: 'Transfer data from or to a server.',
-    options: [
-      new Option({
-        short: '-H',
-        valueKind: OperandKind.TEXT,
-        description: 'Add a custom header to the request.',
-      }),
-      new Option({
-        short: '-A',
-        valueKind: OperandKind.TEXT,
-        description: 'Set the User-Agent header.',
-      }),
-      new Option({
-        short: '-X',
-        valueKind: OperandKind.TEXT,
-        description: 'Specify the HTTP request method.',
-      }),
-      new Option({
-        short: '-d',
-        valueKind: OperandKind.TEXT,
-        description: 'Send the given data as the request body.',
-      }),
-      new Option({
-        short: '-F',
-        valueKind: OperandKind.TEXT,
-        description: 'Submit a multipart/form-data field.',
-      }),
-      new Option({
-        short: '-o',
-        valueKind: OperandKind.PATH,
-        description: 'Write response body to the given file.',
-      }),
-      new Option({ short: '-L', description: 'Follow HTTP redirects.' }),
-      new Option({ short: '-s', description: 'Run silently with no progress or messages.' }),
-      new Option({ short: '-S', description: 'Show errors even when silent.' }),
-      new Option({ long: '--jina', description: 'Fetch via the Jina Reader proxy.' }),
-    ],
+    description:
+      'Transfer data from or to a server. Supported: -X/--request, -H/--header (repeatable), ' +
+      '-d/--data, --data-raw, --data-binary, --data-urlencode, --json (@file and @- read a file ' +
+      'or stdin), -F/--form, -o/--output, -w/--write-out (%{http_code}, %{content_type}, ' +
+      '%{size_download}, %{url_effective}), -i, -I, -v, -s, -S, -f/--fail, -L, -G, -u, -A, -e, ' +
+      '-b, -m/--max-time, --jina. Without -f an HTTP error still prints the body and exits 0.',
+    positional: [new Operand({ kind: OperandKind.TEXT })],
     rest: new Operand({ kind: OperandKind.TEXT }),
   }),
   wget: new CommandSpec({

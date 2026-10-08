@@ -92,7 +92,9 @@ describe.concurrent('net (live network, port of test_net.py)', () => {
       X: 'POST',
       d: 'hello=world',
     })
+    // Like curl, -d is sent as application/x-www-form-urlencoded, so the
+    // echo service parses it as a form field.
     const body = DEC.decode(out)
-    expect(body).toContain('hello=world')
+    expect(body).toContain('"hello":"world"')
   }, 30_000)
 })
