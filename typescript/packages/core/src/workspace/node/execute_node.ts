@@ -1017,10 +1017,7 @@ export function classifyArgvBySpec(
  * aborted the whole script and discarded the output of commands that had
  * already run. Non-glob errors return null and propagate unchanged.
  */
-function globFailure(
-  err: unknown,
-  command: string,
-): [null, IOResult, ExecutionNode] | null {
+function globFailure(err: unknown, command: string): [null, IOResult, ExecutionNode] | null {
   const message = err instanceof Error ? err.message : String(err)
   if (!message.startsWith('glob:')) return null
   const stderr = new TextEncoder().encode(`${message}\n`)
