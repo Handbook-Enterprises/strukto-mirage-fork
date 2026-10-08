@@ -13,6 +13,7 @@
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
 import { CommandSpec, Operand, OperandKind, Option } from './types.ts'
+import { JQ_BOOL_FLAGS, JQ_UNSUPPORTED_FLAGS } from '../../core/jq/flags.ts'
 
 export function specOf(name: string): CommandSpec {
   const spec = BUILTIN_SPECS[name]
@@ -403,18 +404,24 @@ export const BUILTIN_SPECS: Readonly<Record<string, CommandSpec>> = Object.freez
     rest: new Operand({ kind: OperandKind.PATH }),
   }),
   jq: new CommandSpec({
+    description: 'jq 1.8.1: filter JSON. Usage: jq [OPTIONS] FILTER [FILES...]',
     options: [
-      new Option({ short: '-r', long: '--raw-output', description: 'Output raw strings.' }),
-      new Option({ short: '-c', long: '--compact-output', description: 'Compact JSON output.' }),
+      ...JQ_BOOL_FLAGS.map(
+        (f) => new Option({ short: f.short ?? null, long: f.long, description: f.description }),
+      ),
+      ...JQ_UNSUPPORTED_FLAGS.map(
+        (f) => new Option({ long: f.long, description: `Unsupported; ${f.hint}.` }),
+      ),
       new Option({
-        short: '-s',
-        long: '--slurp',
-        description: 'Read the entire input stream into a single array.',
+        long: '--indent',
+        valueKind: OperandKind.TEXT,
+        description: 'Indent with n spaces (0-7).',
       }),
       new Option({
-        short: '-n',
-        long: '--null-input',
-        description: "Use null as the single input value; don't read input.",
+        short: '-f',
+        long: '--from-file',
+        valueKind: OperandKind.PATH,
+        description: 'Read the filter from a file; every operand is then an input file.',
       }),
       new Option({
         long: '--arg',
@@ -434,6 +441,13 @@ export const BUILTIN_SPECS: Readonly<Record<string, CommandSpec>> = Object.freez
         arity: 2,
         tuplePathIndices: [1],
         description: "Bind $name to the file's contents as a string: --rawfile name file.",
+      }),
+      new Option({
+        long: '--slurpfile',
+        valueKind: OperandKind.TEXT,
+        arity: 2,
+        tuplePathIndices: [1],
+        description: "Bind $name to an array of the file's JSON values: --slurpfile name file.",
       }),
     ],
     positional: [new Operand({ kind: OperandKind.TEXT })],

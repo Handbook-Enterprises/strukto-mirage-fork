@@ -65,3 +65,61 @@ export function collectJqFlags(flags: Record<string, string | boolean>): JqFlags
 
   return { raw, compact, slurp, nullInput, evalFlags, rawfiles }
 }
+
+// Every jq 1.8.1 option mirage accepts. The jq spec (commands/spec/builtins.ts)
+// and runJq (run.ts) are both built from this table, so a flag cannot be
+// parsed without being forwarded, or forwarded without being parsed.
+export interface JqBoolFlag {
+  short?: string
+  long: string
+  description: string
+  // Forwarded to jq; null means accepted and ignored (terminal-only).
+  pass: string | null
+}
+
+export const JQ_BOOL_FLAGS: readonly JqBoolFlag[] = [
+  { short: '-r', long: '--raw-output', pass: '-r', description: 'Output strings without quotes.' },
+  { short: '-j', long: '--join-output', pass: '-j', description: 'Like -r, without newlines.' },
+  { long: '--raw-output0', pass: '--raw-output0', description: 'Like -r, NUL after each output.' },
+  { short: '-a', long: '--ascii-output', pass: '-a', description: 'Escape non-ASCII characters.' },
+  { short: '-c', long: '--compact-output', pass: '-c', description: 'Compact JSON output.' },
+  { short: '-s', long: '--slurp', pass: '-s', description: 'Read all inputs into one array.' },
+  {
+    short: '-n',
+    long: '--null-input',
+    pass: '-n',
+    description: "Use null as the single input value; don't read input.",
+  },
+  { short: '-R', long: '--raw-input', pass: '-R', description: 'Read each line as a string.' },
+  {
+    short: '-e',
+    long: '--exit-status',
+    pass: '-e',
+    description: 'Exit 1 if the last output is false or null, 4 if there was none.',
+  },
+  { short: '-S', long: '--sort-keys', pass: '-S', description: 'Sort object keys.' },
+  { long: '--tab', pass: '--tab', description: 'Indent with tabs.' },
+  { long: '--seq', pass: '--seq', description: 'Use application/json-seq framing.' },
+  { long: '--stream', pass: '--stream', description: 'Emit [path, leaf] events.' },
+  { long: '--stream-errors', pass: '--stream-errors', description: 'Like --stream, plus errors.' },
+  {
+    short: '-C',
+    long: '--color-output',
+    pass: null,
+    description: 'Ignored: output is never colored.',
+  },
+  {
+    short: '-M',
+    long: '--monochrome-output',
+    pass: null,
+    description: 'Ignored: output is never colored.',
+  },
+  { long: '--unbuffered', pass: null, description: 'Ignored.' },
+]
+
+// $ARGS positional modes: jq-wasm always appends its input file after the
+// filter, so these cannot be forwarded faithfully. Reject instead of misreading.
+export const JQ_UNSUPPORTED_FLAGS: readonly { long: string; hint: string }[] = [
+  { long: '--args', hint: 'use --arg name value' },
+  { long: '--jsonargs', hint: 'use --argjson name json' },
+]

@@ -13,7 +13,14 @@
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
 export { jqEval } from './eval.ts'
-export { collectJqFlags, type JqFlags, type JqRawfileSpec } from './flags.ts'
+export {
+  collectJqFlags,
+  JQ_BOOL_FLAGS,
+  JQ_UNSUPPORTED_FLAGS,
+  type JqBoolFlag,
+  type JqFlags,
+  type JqRawfileSpec,
+} from './flags.ts'
 export { JQ_EMPTY, concatBytes, formatJqOutput } from './format.ts'
 export {
   evalJsonlStream,
@@ -23,3 +30,4 @@ export {
   parseJsonPath,
   parseJsonl,
 } from './stream.ts'
+export { jqReadPaths, runJq, type JqPathReader } from './run.ts'

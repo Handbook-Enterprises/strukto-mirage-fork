@@ -137,7 +137,8 @@ describe('jq command — flag behavior', () => {
       n: true,
       rawfile: JSON.stringify([['data', '/tmp/nope.txt']]),
     })
-    expect(r.exitCode).toBe(1)
+    // jq exits 2 when it cannot open a file.
+    expect(r.exitCode).toBe(2)
   })
 
   it('reads a direct file operand', async () => {
@@ -157,5 +158,112 @@ describe('jq command — flag behavior', () => {
     const resource = new RAMResource()
     const r = await runJq(resource, 'length', [], { s: true }, ENC.encode('5\n'))
     expect(r.out.trim()).toBe('1')
+  })
+})
+
+async function runCli(
+  cmdline: string,
+  stdin: string | null = null,
+  files: Record<string, string> = {},
+): Promise<{ out: string; err: string; exitCode: number }> {
+  const resource = new RAMResource()
+  for (const [path, text] of Object.entries(files)) resource.store.files.set(path, ENC.encode(text))
+  const parsed = parseCommand(specOf('jq'), cmdline.split(' ').slice(1), '/')
+  const cmd = RAM_JQ[0]
+  if (cmd === undefined) throw new Error('jq not registered')
+  const result = await cmd.fn(
+    (resource as { accessor?: unknown }).accessor as never,
+    parsed.paths().map((p) => PathSpec.fromStrPath(p)),
+    parsed.texts(),
+    {
+      stdin: stdin === null ? null : ENC.encode(stdin),
+      flags: parseToKwargs(parsed),
+      filetypeFns: null,
+      cwd: '/',
+      resource,
+    },
+  )
+  if (result === null) throw new Error('no result')
+  const [out, io] = result
+  const buf = out === null ? new Uint8Array() : await materialize(out as AsyncIterable<Uint8Array>)
+  const err = io.stderr instanceof Uint8Array ? DEC.decode(io.stderr) : ''
+  return { out: DEC.decode(buf), err, exitCode: io.exitCode }
+}
+
+describe('jq command — real jq semantics', () => {
+  it.each([
+    ['-e', '-e .b'],
+    ['-j', '-j .a'],
+    ['-S', '-S .'],
+    ['-R', '-R .'],
+    ['--tab', '--tab .'],
+    ['--indent', '--indent 1 .'],
+    ['--seq', '--seq .'],
+    ['-a', '-a .'],
+    ['-M', '-M .a'],
+  ])('accepts %s instead of reading the filter as a file', async (_flag, args) => {
+    const r = await runCli(`jq ${args}`, '{"a":1}')
+    expect(r.err).not.toMatch(/no mount|file not found|Could not open/)
+  })
+
+  it('prints each output on its own line, honoring -r', async () => {
+    const r = await runCli('jq -r .a,.b', '{"a":"x","b":"y"}')
+    expect(r.out).toBe('x\ny\n')
+  })
+
+  it('does not fold generator output into an array', async () => {
+    const r = await runCli('jq -n -c range(3)')
+    expect(r.out).toBe('0\n1\n2\n')
+  })
+
+  it('treats piped NDJSON as a stream of values', async () => {
+    const r = await runCli('jq .a', '{"a":1}\n{"a":2}\n')
+    expect(r.exitCode).toBe(0)
+    expect(r.out).toBe('1\n2\n')
+  })
+
+  it('slurps piped NDJSON with -s', async () => {
+    const r = await runCli('jq -c -s .', '{"a":1}\n{"a":2}\n')
+    expect(r.out).toBe('[{"a":1},{"a":2}]\n')
+  })
+
+  it('returns jq exit status for -e', async () => {
+    expect((await runCli('jq -e .b', '{"a":1}')).exitCode).toBe(1)
+    expect((await runCli('jq -e .a', '{"a":1}')).exitCode).toBe(0)
+  })
+
+  it('reports jq errors once, with jq exit codes', async () => {
+    const r = await runCli('jq .a.b', '{"a":1}')
+    expect(r.exitCode).toBe(5)
+    expect(r.err).toMatch(/^jq: error/)
+    expect(r.err).not.toMatch(/jq: jq:/)
+  })
+
+  it('keeps a .jsonl file operand as one array of records', async () => {
+    const files = { '/d.jsonl': '{"a":1}\n{"a":2}\n' }
+    expect((await runCli('jq length /d.jsonl', null, files)).out).toBe('2\n')
+    expect((await runCli('jq .[].a /d.jsonl', null, files)).out).toBe('1\n2\n')
+  })
+
+  it('concatenates outputs across file operands', async () => {
+    const files = { '/a.json': '{"v":1}', '/b.json': '{"v":2}' }
+    expect((await runCli('jq .v /a.json /b.json', null, files)).out).toBe('1\n2\n')
+  })
+
+  it('binds --slurpfile as an array of the file values', async () => {
+    const files = { '/v.json': '1 2 3' }
+    const r = await runCli('jq -n -c --slurpfile xs /v.json $xs', null, files)
+    expect(r.out).toBe('[1,2,3]\n')
+  })
+
+  it('reads the filter from -f and treats the operand as input', async () => {
+    const files = { '/f.jq': '.a', '/in.json': '{"a":9}' }
+    expect((await runCli('jq -f /f.jq /in.json', null, files)).out).toBe('9\n')
+  })
+
+  it('rejects --args with a pointer to --arg', async () => {
+    const r = await runCli('jq -n --args $ARGS a')
+    expect(r.exitCode).toBe(2)
+    expect(r.err).toMatch(/--arg name value/)
   })
 })
