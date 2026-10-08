@@ -297,15 +297,24 @@ export async function executeNode(
 
   if (ntype === NT.FOR_STATEMENT) {
     const [variable, values, body] = getForParts(node)
-    const classified = await expandAndClassify(
-      values,
-      session,
-      executeFn,
-      registry,
-      session.cwd,
-      callStack,
-    )
-    const resolved = await resolveGlobs(classified, registry)
+    // Classification raises glob errors too ("no mounted path for pattern"),
+    // so it sits inside the same catch as resolveGlobs.
+    let resolved: Awaited<ReturnType<typeof resolveGlobs>>
+    try {
+      const classified = await expandAndClassify(
+        values,
+        session,
+        executeFn,
+        registry,
+        session.cwd,
+        callStack,
+      )
+      resolved = await resolveGlobs(classified, registry)
+    } catch (err) {
+      const failed = globFailure(err, 'for')
+      if (failed === null) throw err
+      return failed
+    }
     if (node.children[0]?.type === NT.SELECT) {
       return handleSelect(recurse, variable, resolved, body, session, stdin, callStack)
     }
@@ -728,8 +737,17 @@ async function runCommandBody(
     pathArgs = pathSet.size > 0 ? pathSet : null
   }
 
-  const classified = classifyParts(expanded, registry, session.cwd, textArgs, pathArgs)
-  const resolved = await resolveGlobs(classified, registry, textArgs)
+  let classified: ReturnType<typeof classifyParts>
+  let resolved: Awaited<ReturnType<typeof resolveGlobs>>
+  try {
+    // classifyParts raises "glob: no mounted path for pattern" itself.
+    classified = classifyParts(expanded, registry, session.cwd, textArgs, pathArgs)
+    resolved = await resolveGlobs(classified, registry, textArgs)
+  } catch (err) {
+    const failed = globFailure(err, name)
+    if (failed === null) throw err
+    return failed
+  }
   const finalExpanded = resolved.map((p) => (p instanceof PathSpec ? p.original : p))
 
   // Unsupported bash builtins. Constructs the parser accepts but the
@@ -995,4 +1013,21 @@ export function classifyArgvBySpec(
   for (const v of flagTextValues) textSet.add(v)
   for (const v of flagPathValues) pathSet.add(v)
   return [textSet, pathSet]
+}
+
+/**
+ * A failed glob expansion fails the one command that used the pattern, as in
+ * bash with failglob: exit 1 with the message on stderr. Throwing instead
+ * aborted the whole script and discarded the output of commands that had
+ * already run. Non-glob errors return null and propagate unchanged.
+ */
+function globFailure(err: unknown, command: string): [null, IOResult, ExecutionNode] | null {
+  const message = err instanceof Error ? err.message : String(err)
+  if (!message.startsWith('glob:')) return null
+  const stderr = new TextEncoder().encode(`${message}\n`)
+  return [
+    null,
+    new IOResult({ exitCode: 1, stderr }),
+    new ExecutionNode({ command, exitCode: 1, stderr }),
+  ]
 }
