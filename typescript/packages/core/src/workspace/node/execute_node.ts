@@ -297,16 +297,18 @@ export async function executeNode(
 
   if (ntype === NT.FOR_STATEMENT) {
     const [variable, values, body] = getForParts(node)
-    const classified = await expandAndClassify(
-      values,
-      session,
-      executeFn,
-      registry,
-      session.cwd,
-      callStack,
-    )
+    // Classification raises glob errors too ("no mounted path for pattern"),
+    // so it sits inside the same catch as resolveGlobs.
     let resolved: Awaited<ReturnType<typeof resolveGlobs>>
     try {
+      const classified = await expandAndClassify(
+        values,
+        session,
+        executeFn,
+        registry,
+        session.cwd,
+        callStack,
+      )
       resolved = await resolveGlobs(classified, registry)
     } catch (err) {
       const failed = globFailure(err, 'for')
@@ -735,9 +737,11 @@ async function runCommandBody(
     pathArgs = pathSet.size > 0 ? pathSet : null
   }
 
-  const classified = classifyParts(expanded, registry, session.cwd, textArgs, pathArgs)
+  let classified: ReturnType<typeof classifyParts>
   let resolved: Awaited<ReturnType<typeof resolveGlobs>>
   try {
+    // classifyParts raises "glob: no mounted path for pattern" itself.
+    classified = classifyParts(expanded, registry, session.cwd, textArgs, pathArgs)
     resolved = await resolveGlobs(classified, registry, textArgs)
   } catch (err) {
     const failed = globFailure(err, name)

@@ -40,4 +40,14 @@ describe('workspace: a failed glob fails only its own command', () => {
     expect(stderrStr(io)).toContain('glob: no matches')
     await ws.close()
   })
+
+  it('fails a pattern on an unmounted path without aborting the script', async () => {
+    const { ws } = await makeWorkspace()
+    const io = await ws.execute(
+      'echo before; cat /nomount/zzz*.txt; for f in /nomount/*.txt; do echo $f; done; echo after',
+    )
+    expect(stdoutStr(io)).toBe('before\nafter\n')
+    expect(stderrStr(io)).toContain('glob:')
+    await ws.close()
+  })
 })
