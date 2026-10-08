@@ -17,7 +17,7 @@ import { IOResult } from '../../../io/types.ts'
 import { PathSpec } from '../../../types.ts'
 import { command, type CommandFnResult, type CommandOpts } from '../../config.ts'
 import { specOf } from '../../spec/builtins.ts'
-import { httpExchange, httpFormRequest, type HttpExchange } from '../utils/http.ts'
+import { httpExchange, type HttpExchange } from '../utils/http.ts'
 import { readStdinAsync } from '../utils/stream.ts'
 
 // curl reads its own argv, like the real binary. The spec declares no options
@@ -56,6 +56,7 @@ interface CurlArgs {
   silent: boolean
   showError: boolean
   fail: boolean
+  failWithBody: boolean
   include: boolean
   head: boolean
   verbose: boolean
@@ -106,7 +107,7 @@ const BOOL_OPTS: Record<string, keyof CurlArgs | null> = {
   '--show-error': 'showError',
   '-f': 'fail',
   '--fail': 'fail',
-  '--fail-with-body': 'fail',
+  '--fail-with-body': 'failWithBody',
   '-i': 'include',
   '--include': 'include',
   '-I': 'head',
@@ -141,6 +142,7 @@ function emptyArgs(): CurlArgs {
     silent: false,
     showError: false,
     fail: false,
+    failWithBody: false,
     include: false,
     head: false,
     verbose: false,
@@ -272,47 +274,100 @@ async function readSource(spec: string, opts: CommandOpts): Promise<Uint8Array> 
   throw new Error(`cannot read ${spec}`)
 }
 
-/** Build the request body the way curl joins -d/--data* values (with &). */
-async function buildBody(args: CurlArgs, opts: CommandOpts): Promise<string | null> {
+function concat(parts: Uint8Array[]): Uint8Array {
+  const out = new Uint8Array(parts.reduce((n, p) => n + p.byteLength, 0))
+  let off = 0
+  for (const p of parts) {
+    out.set(p, off)
+    off += p.byteLength
+  }
+  return out
+}
+
+/**
+ * The request body as bytes, joined with `&` the way curl joins -d values.
+ * Bytes stay bytes: only text modes are decoded, so `--data-binary @file`
+ * uploads a binary file unchanged.
+ */
+async function buildBody(args: CurlArgs, opts: CommandOpts): Promise<Uint8Array | null> {
   if (args.data.length === 0) return null
-  const parts: string[] = []
+  const parts: Uint8Array[] = []
   for (const { kind, value } of args.data) {
+    if (parts.length > 0) parts.push(ENC.encode('&'))
     if (kind === 'raw') {
-      parts.push(value)
+      parts.push(ENC.encode(value))
     } else if (kind === 'urlencode') {
       const eq = value.indexOf('=')
       const at = value.indexOf('@')
-      if (eq >= 0) parts.push(`${value.slice(0, eq + 1)}${encodeURIComponent(value.slice(eq + 1))}`)
-      else if (at >= 0) {
+      if (eq >= 0) {
+        parts.push(
+          ENC.encode(`${value.slice(0, eq + 1)}${encodeURIComponent(value.slice(eq + 1))}`),
+        )
+      } else if (at >= 0) {
         const content = DEC.decode(await readSource(value.slice(at + 1), opts))
         const name = value.slice(0, at)
-        parts.push(`${name !== '' ? `${name}=` : ''}${encodeURIComponent(content)}`)
-      } else parts.push(encodeURIComponent(value))
+        parts.push(ENC.encode(`${name !== '' ? `${name}=` : ''}${encodeURIComponent(content)}`))
+      } else {
+        parts.push(ENC.encode(encodeURIComponent(value)))
+      }
     } else if (value.startsWith('@')) {
-      let content = DEC.decode(await readSource(value.slice(1), opts))
-      // -d/--data strips newlines from a file; --data-binary and --json keep them.
-      if (kind === 'data') content = content.replace(/[\r\n]/g, '')
-      parts.push(content)
+      const content = await readSource(value.slice(1), opts)
+      // -d/--data strips CR and LF from a file; --data-binary and --json keep every byte.
+      parts.push(kind === 'data' ? content.filter((b) => b !== 0x0a && b !== 0x0d) : content)
     } else {
-      parts.push(value)
+      parts.push(ENC.encode(value))
     }
   }
-  return parts.join('&')
+  return concat(parts)
 }
 
-function headerMap(lines: string[]): Record<string, string> {
-  // Keyed case-insensitively: a later -H for the same name replaces the
-  // earlier one, and an empty value ("X-Foo:") removes it, as in curl.
+/** -F fields as multipart/form-data: `name=value`, `name=@file` (file part), `name=<file` (contents). */
+async function buildForm(args: CurlArgs, opts: CommandOpts): Promise<FormData> {
+  const form = new FormData()
+  for (const field of args.form) {
+    const eq = field.indexOf('=')
+    const name = eq >= 0 ? field.slice(0, eq) : field
+    const value = eq >= 0 ? field.slice(eq + 1) : ''
+    if (value.startsWith('@')) {
+      const spec = value.slice(1).split(';')[0] ?? ''
+      const bytes = await readSource(spec, opts)
+      form.append(
+        name,
+        new Blob([bytes.slice().buffer]),
+        spec.slice(spec.lastIndexOf('/') + 1) || 'file',
+      )
+    } else if (value.startsWith('<')) {
+      form.append(name, DEC.decode(await readSource(value.slice(1), opts)))
+    } else {
+      form.append(name, value)
+    }
+  }
+  return form
+}
+
+/**
+ * Final request headers plus the names explicitly removed with an empty value
+ * (`-H 'Content-Type:'`), so curl's defaults are not re-added for them. Keyed
+ * case-insensitively; a later -H for the same name replaces the earlier one.
+ */
+function headerMap(lines: string[]): { headers: Record<string, string>; removed: Set<string> } {
   const byName = new Map<string, [string, string]>()
+  const removed = new Set<string>()
   for (const line of lines) {
     const idx = line.indexOf(':')
     if (idx <= 0) continue
     const name = line.slice(0, idx).trim()
     const value = line.slice(idx + 1).trim()
-    if (value === '') byName.delete(name.toLowerCase())
-    else byName.set(name.toLowerCase(), [name, value])
+    const key = name.toLowerCase()
+    if (value === '') {
+      byName.delete(key)
+      removed.add(key)
+    } else {
+      byName.set(key, [name, value])
+      removed.delete(key)
+    }
   }
-  return Object.fromEntries(byName.values())
+  return { headers: Object.fromEntries(byName.values()), removed }
 }
 
 function headerBlock(ex: HttpExchange): string {
@@ -336,18 +391,10 @@ function writeOut(format: string, ex: HttpExchange): string {
     .replace(/\\r/g, '\r')
 }
 
-function fail(message: string, exitCode: number): CommandFnResult {
+function fail(message: string, exitCode: number, quiet = false): CommandFnResult {
+  // curl -s hides error messages (unless -S); the exit code still reports it.
+  if (quiet) return [null, new IOResult({ exitCode })]
   return [null, new IOResult({ exitCode, stderr: ENC.encode(`${message}\n`) })]
-}
-
-function concat(parts: Uint8Array[]): Uint8Array {
-  const out = new Uint8Array(parts.reduce((n, p) => n + p.byteLength, 0))
-  let off = 0
-  for (const p of parts) {
-    out.set(p, off)
-    off += p.byteLength
-  }
-  return out
 }
 
 async function curlCommand(
@@ -360,38 +407,38 @@ async function curlCommand(
   if (typeof parsed === 'string') return fail(parsed, 2)
   const args = parsed
   if (args.url === null) return fail('curl: no URL specified', 2)
+  const quiet = args.silent && !args.showError
 
-  const headers = headerMap(args.headers)
-  if (
-    args.user !== null &&
-    !Object.keys(headers).some((k) => k.toLowerCase() === 'authorization')
-  ) {
+  const { headers, removed } = headerMap(args.headers)
+  const has = (name: string): boolean =>
+    removed.has(name) || Object.keys(headers).some((k) => k.toLowerCase() === name)
+  if (args.user !== null && !has('authorization')) {
     headers.Authorization = `Basic ${btoa(args.user)}`
   }
 
-  let body: string | null
+  let body: Uint8Array | FormData | null
   try {
-    body = await buildBody(args, opts)
+    if (args.form.length > 0) {
+      // fetch sets the multipart Content-Type (with boundary) itself.
+      body = await buildForm(args, opts)
+    } else {
+      body = await buildBody(args, opts)
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    return fail(`curl: ${msg}`, 26)
+    return fail(`curl: (26) ${msg}`, 26, quiet)
   }
   const isJson = args.data.some((d) => d.kind === 'json')
   if (isJson) {
-    if (!Object.keys(headers).some((k) => k.toLowerCase() === 'content-type'))
-      headers['Content-Type'] = 'application/json'
-    if (!Object.keys(headers).some((k) => k.toLowerCase() === 'accept'))
-      headers.Accept = 'application/json'
-  } else if (
-    body !== null &&
-    !Object.keys(headers).some((k) => k.toLowerCase() === 'content-type')
-  ) {
+    if (!has('content-type')) headers['Content-Type'] = 'application/json'
+    if (!has('accept')) headers.Accept = 'application/json'
+  } else if (body instanceof Uint8Array && !has('content-type')) {
     headers['Content-Type'] = 'application/x-www-form-urlencoded'
   }
 
   let url = args.url
-  if (args.get && body !== null) {
-    url = `${url}${url.includes('?') ? '&' : '?'}${body}`
+  if (args.get && body instanceof Uint8Array) {
+    url = `${url}${url.includes('?') ? '&' : '?'}${DEC.decode(body)}`
     body = null
   }
   const method = args.head ? 'HEAD' : (args.method ?? (body !== null ? 'POST' : 'GET'))
@@ -399,33 +446,23 @@ async function curlCommand(
 
   let ex: HttpExchange
   try {
-    if (args.form.length > 0) {
-      const formData: Record<string, string> = {}
-      for (const field of args.form) {
-        const eq = field.indexOf('=')
-        formData[eq >= 0 ? field.slice(0, eq) : field] = eq >= 0 ? field.slice(eq + 1) : ''
-      }
-      const out = await httpFormRequest(url, {
-        method: args.method ?? 'POST',
-        formData,
-        headers,
-        ...(timeoutMs !== undefined ? { timeoutMs } : {}),
-      })
-      ex = { status: 200, statusText: 'OK', url, headers: [], body: out }
-    } else {
-      ex = await httpExchange(url, {
-        method,
-        headers,
-        ...(body !== null ? { body: ENC.encode(body) } : {}),
-        ...(timeoutMs !== undefined ? { timeoutMs } : {}),
-        jina: args.jina,
-        followRedirects: args.location,
-      })
-    }
+    ex = await httpExchange(url, {
+      method,
+      headers,
+      ...(body !== null ? { body } : {}),
+      ...(timeoutMs !== undefined ? { timeoutMs } : {}),
+      jina: args.jina,
+      followRedirects: args.location,
+      omitUserAgent: removed.has('user-agent'),
+    })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     const timedOut = msg.toLowerCase().includes('abort')
-    return fail(timedOut ? 'curl: (28) Operation timed out' : `curl: (6) ${msg}`, timedOut ? 28 : 6)
+    return fail(
+      timedOut ? 'curl: (28) Operation timed out' : `curl: (6) ${msg}`,
+      timedOut ? 28 : 6,
+      quiet,
+    )
   }
 
   const stderr: string[] = []
@@ -435,14 +472,15 @@ async function curlCommand(
     stderr.push(`< HTTP/1.1 ${String(ex.status)} ${ex.statusText}`.trimEnd())
     for (const [k, v] of ex.headers) stderr.push(`< ${k}: ${v}`)
   }
-  const failed = args.fail && ex.status >= 400
-  if (failed && (!args.silent || args.showError)) {
+  const failed = (args.fail || args.failWithBody) && ex.status >= 400
+  if (failed && !quiet) {
     stderr.push(`curl: (22) The requested URL returned error: ${String(ex.status)}`)
   }
 
   const shown: Uint8Array[] = []
   if (args.include || args.head) shown.push(ENC.encode(headerBlock(ex)))
-  if (!args.head && !failed) shown.push(ex.body)
+  // --fail suppresses the error body; --fail-with-body keeps it.
+  if (!args.head && (!failed || args.failWithBody)) shown.push(ex.body)
   const payload = concat(shown)
 
   const out: Uint8Array[] = []
@@ -453,7 +491,7 @@ async function curlCommand(
         await opts.dispatch('write', resolveTarget(args.output, opts.cwd), [payload])
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err)
-        return fail(`curl: (23) ${args.output}: ${errMsg}`, 23)
+        return fail(`curl: (23) ${args.output}: ${errMsg}`, 23, quiet)
       }
     }
     io.writes = { [args.output]: payload }
@@ -461,9 +499,8 @@ async function curlCommand(
     out.push(payload)
   }
   if (args.writeOut !== null) out.push(ENC.encode(writeOut(args.writeOut, ex)))
-  const stdout = concat(out)
   return [
-    stdout,
+    concat(out),
     new IOResult({
       exitCode: failed ? 22 : 0,
       ...(stderr.length > 0 ? { stderr: ENC.encode(`${stderr.join('\n')}\n`) } : {}),

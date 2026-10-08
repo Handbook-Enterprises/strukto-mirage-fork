@@ -89,7 +89,11 @@ export interface HttpExchange {
  */
 export async function httpExchange(
   url: string,
-  options: HttpRequestOptions = {},
+  options: Omit<HttpRequestOptions, 'body'> & {
+    body?: Uint8Array | FormData
+    /** curl `-H 'User-Agent:'`: send no User-Agent at all. */
+    omitUserAgent?: boolean
+  } = {},
 ): Promise<HttpExchange> {
   const method = options.method ?? 'GET'
   const target =
@@ -101,7 +105,10 @@ export async function httpExchange(
   try {
     const init: RequestInit = {
       method,
-      headers: { 'User-Agent': DEFAULT_USER_AGENT, ...(options.headers ?? {}) },
+      headers: {
+        ...(options.omitUserAgent === true ? {} : { 'User-Agent': DEFAULT_USER_AGENT }),
+        ...(options.headers ?? {}),
+      },
       signal: controller.signal,
       redirect: options.followRedirects === false ? 'manual' : 'follow',
     }

@@ -83,7 +83,7 @@ describe('curl -o persists to mount', () => {
 
   it('fails with non-zero exit on a read-only mount', async () => {
     const ws = await makeWs()
-    const io = await ws.execute('curl -s https://x.test/file -o /readonly/foo.bin')
+    const io = await ws.execute('curl -sS https://x.test/file -o /readonly/foo.bin')
     expect(io.exitCode).toBe(23) // curl: (23) write error
     expect(io.stderrText).toMatch(/read-only/)
     expect(io.stderrText).toContain('/readonly/foo.bin')
@@ -92,7 +92,7 @@ describe('curl -o persists to mount', () => {
 
   it('fails when target has no mount', async () => {
     const ws = await makeWs()
-    const io = await ws.execute('curl -s https://x.test/file -o /nope/foo.bin')
+    const io = await ws.execute('curl -sS https://x.test/file -o /nope/foo.bin')
     expect(io.exitCode).toBe(23) // curl: (23) write error
     expect(io.stderrText).toMatch(/no mount/)
     expect(io.stderrText).toContain('/nope/foo.bin')
@@ -101,7 +101,7 @@ describe('curl -o persists to mount', () => {
 
   it('fails when target resource has no write op', async () => {
     const ws = await makeWs()
-    const io = await ws.execute('curl -s https://x.test/file -o /nowrite/foo.bin')
+    const io = await ws.execute('curl -sS https://x.test/file -o /nowrite/foo.bin')
     expect(io.exitCode).toBe(23) // curl: (23) write error
     expect(io.stderrText).toMatch(/no op|write/)
     expect(io.stderrText).toContain('/nowrite/foo.bin')

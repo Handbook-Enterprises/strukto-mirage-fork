@@ -273,4 +273,65 @@ describe('curl argv parsing (real curl semantics)', () => {
     expect(r.exitCode).toBe(0)
     expect(calls[0]?.init?.method).toBe('PUT')
   })
+
+  it('--fail-with-body exits 22 and still prints the error body', async () => {
+    mockStatus(400, 'invalid_payload')
+    const r = await curl(['-s', '--fail-with-body', 'https://x.test/'])
+    expect(r).toMatchObject({ out: 'invalid_payload', exitCode: 22 })
+  })
+
+  it('--data-binary @file sends non-UTF-8 bytes unchanged', async () => {
+    const calls = mockStatus(200, 'ok')
+    const resource = new RAMResource()
+    const bytes = Uint8Array.from([0xff, 0x00, 0x0a, 0x80])
+    const cmd = GENERAL_CURL[0]
+    if (cmd === undefined) throw new Error('curl not registered')
+    await cmd.fn(
+      (resource as { accessor?: unknown }).accessor as never,
+      [],
+      ['--data-binary', '@/data/b.bin', 'https://x.test/'],
+      {
+        stdin: null,
+        flags: {},
+        filetypeFns: null,
+        cwd: '/',
+        resource,
+        dispatch: () => Promise.resolve([bytes, new IOResult()]),
+      },
+    )
+    expect(Array.from(calls[0]?.init?.body as Uint8Array)).toEqual([0xff, 0x00, 0x0a, 0x80])
+  })
+
+  it('an empty -H value suppresses the default header', async () => {
+    const calls = mockStatus(200, 'ok')
+    await curl(['-H', 'User-Agent:', '-H', 'Content-Type:', '-d', 'x', 'https://x.test/'])
+    const h = calls[0]?.init?.headers as Record<string, string>
+    expect(Object.keys(h).map((k) => k.toLowerCase())).not.toContain('user-agent')
+    expect(Object.keys(h).map((k) => k.toLowerCase())).not.toContain('content-type')
+  })
+
+  it('-F sends multipart form data with file parts', async () => {
+    const calls = mockStatus(200, 'ok')
+    await curl(['-F', 'note=hi', '-F', 'doc=@/data/a.txt', 'https://x.test/'], {
+      '/data/a.txt': 'file body',
+    })
+    const body = calls[0]?.init?.body
+    expect(body).toBeInstanceOf(FormData)
+    const form = body as FormData
+    expect(form.get('note')).toBe('hi')
+    const file = form.get('doc') as File
+    expect(file.name).toBe('a.txt')
+    expect(await file.text()).toBe('file body')
+  })
+
+  it('-s hides transport errors unless -S, keeping the exit code', async () => {
+    globalThis.fetch = vi.fn(() =>
+      Promise.reject(new Error('getaddrinfo ENOTFOUND')),
+    ) as typeof fetch
+    const quiet = await curl(['-s', 'https://nope.test/'])
+    expect(quiet).toMatchObject({ exitCode: 6, err: '' })
+    const shown = await curl(['-sS', 'https://nope.test/'])
+    expect(shown.exitCode).toBe(6)
+    expect(shown.err).toContain('ENOTFOUND')
+  })
 })
