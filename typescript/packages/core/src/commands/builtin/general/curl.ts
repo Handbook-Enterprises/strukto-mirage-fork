@@ -17,9 +17,17 @@ import { IOResult } from '../../../io/types.ts'
 import { PathSpec } from '../../../types.ts'
 import { command, type CommandFnResult, type CommandOpts } from '../../config.ts'
 import { specOf } from '../../spec/builtins.ts'
-import { httpFormRequest, httpRequest } from '../utils/http.ts'
+import { httpExchange, httpFormRequest, type HttpExchange } from '../utils/http.ts'
+import { readStdinAsync } from '../utils/stream.ts'
+
+// curl reads its own argv, like the real binary. The spec declares no options
+// (see commands/spec/builtins.ts), so the shell parser hands every token to
+// this command in order. A short option table used to drop repeated -H, read
+// `-d @file` as the literal text "@file", reject -w as a URL, and turn every
+// 4xx/5xx into exit 22 with the response body discarded.
 
 const ENC = new TextEncoder()
+const DEC = new TextDecoder()
 
 export function resolveTarget(o: string, cwd: string): PathSpec {
   let path = o
@@ -32,77 +40,436 @@ export function resolveTarget(o: string, cwd: string): PathSpec {
   return new PathSpec({ original: path, directory, resolved: true })
 }
 
+type DataKind = 'data' | 'binary' | 'raw' | 'urlencode' | 'json'
+
+interface CurlArgs {
+  url: string | null
+  method: string | null
+  headers: string[]
+  data: { kind: DataKind; value: string }[]
+  form: string[]
+  output: string | null
+  writeOut: string | null
+  user: string | null
+  maxTimeSec: number | null
+  location: boolean
+  silent: boolean
+  showError: boolean
+  fail: boolean
+  include: boolean
+  head: boolean
+  verbose: boolean
+  get: boolean
+  jina: boolean
+}
+
+// Options that take a value, by every spelling curl accepts.
+const VALUE_OPTS: Record<string, string> = {
+  '-X': 'method',
+  '--request': 'method',
+  '-H': 'header',
+  '--header': 'header',
+  '-d': 'data',
+  '--data': 'data',
+  '--data-ascii': 'data',
+  '--data-binary': 'binary',
+  '--data-raw': 'raw',
+  '--data-urlencode': 'urlencode',
+  '--json': 'json',
+  '-F': 'form',
+  '--form': 'form',
+  '-o': 'output',
+  '--output': 'output',
+  '-w': 'writeOut',
+  '--write-out': 'writeOut',
+  '-A': 'agent',
+  '--user-agent': 'agent',
+  '-e': 'referer',
+  '--referer': 'referer',
+  '-b': 'cookie',
+  '--cookie': 'cookie',
+  '-u': 'user',
+  '--user': 'user',
+  '-m': 'maxTime',
+  '--max-time': 'maxTime',
+  '--connect-timeout': 'ignoreValue',
+  '--retry': 'ignoreValue',
+  '--url': 'url',
+}
+
+const BOOL_OPTS: Record<string, keyof CurlArgs | null> = {
+  '-L': 'location',
+  '--location': 'location',
+  '-s': 'silent',
+  '--silent': 'silent',
+  '-S': 'showError',
+  '--show-error': 'showError',
+  '-f': 'fail',
+  '--fail': 'fail',
+  '--fail-with-body': 'fail',
+  '-i': 'include',
+  '--include': 'include',
+  '-I': 'head',
+  '--head': 'head',
+  '-v': 'verbose',
+  '--verbose': 'verbose',
+  '-G': 'get',
+  '--get': 'get',
+  '--jina': 'jina',
+  // Accepted and ignored: no effect in this runtime.
+  '-k': null,
+  '--insecure': null,
+  '--compressed': null,
+  '-#': null,
+  '--progress-bar': null,
+  '-N': null,
+  '--no-buffer': null,
+}
+
+function emptyArgs(): CurlArgs {
+  return {
+    url: null,
+    method: null,
+    headers: [],
+    data: [],
+    form: [],
+    output: null,
+    writeOut: null,
+    user: null,
+    maxTimeSec: null,
+    location: false,
+    silent: false,
+    showError: false,
+    fail: false,
+    include: false,
+    head: false,
+    verbose: false,
+    get: false,
+    jina: false,
+  }
+}
+
+function applyValue(args: CurlArgs, key: string, value: string): string | null {
+  switch (key) {
+    case 'method':
+      args.method = value
+      return null
+    case 'header':
+      args.headers.push(value)
+      return null
+    case 'data':
+    case 'binary':
+    case 'raw':
+    case 'urlencode':
+    case 'json':
+      args.data.push({ kind: key, value })
+      return null
+    case 'form':
+      args.form.push(value)
+      return null
+    case 'output':
+      args.output = value
+      return null
+    case 'writeOut':
+      args.writeOut = value
+      return null
+    case 'agent':
+      args.headers.push(`User-Agent: ${value}`)
+      return null
+    case 'referer':
+      args.headers.push(`Referer: ${value}`)
+      return null
+    case 'cookie':
+      args.headers.push(`Cookie: ${value}`)
+      return null
+    case 'user':
+      args.user = value
+      return null
+    case 'maxTime': {
+      const n = Number(value)
+      if (!Number.isFinite(n) || n <= 0)
+        return `curl: option --max-time: expected a number, got '${value}'`
+      args.maxTimeSec = n
+      return null
+    }
+    case 'url':
+      args.url = value
+      return null
+    default:
+      return null
+  }
+}
+
+/** Parse curl argv. Returns the args or an error message (curl exit 2). */
+export function parseCurlArgv(argv: readonly string[]): CurlArgs | string {
+  const args = emptyArgs()
+  for (let i = 0; i < argv.length; i++) {
+    const tok = argv[i] ?? ''
+    if (tok.startsWith('--')) {
+      const eq = tok.indexOf('=')
+      const name = eq > 0 ? tok.slice(0, eq) : tok
+      if (name in BOOL_OPTS) {
+        const key = BOOL_OPTS[name]
+        if (key !== null && key !== undefined)
+          (args as unknown as Record<string, unknown>)[key] = true
+        continue
+      }
+      const valueKey = VALUE_OPTS[name]
+      if (valueKey === undefined) return `curl: option ${name}: is unknown`
+      const value = eq > 0 ? tok.slice(eq + 1) : argv[++i]
+      if (value === undefined) return `curl: option ${name}: requires parameter`
+      const err = applyValue(args, valueKey, value)
+      if (err !== null) return err
+      continue
+    }
+    if (tok.startsWith('-') && tok.length > 1) {
+      // Bundled short flags (-sS, -sSL) and attached values (-XPOST, -osome.txt).
+      for (let j = 1; j < tok.length; j++) {
+        const flag = `-${tok[j] ?? ''}`
+        if (flag in BOOL_OPTS) {
+          const key = BOOL_OPTS[flag]
+          if (key !== null && key !== undefined)
+            (args as unknown as Record<string, unknown>)[key] = true
+          continue
+        }
+        const valueKey = VALUE_OPTS[flag]
+        if (valueKey === undefined) return `curl: option ${flag}: is unknown`
+        const rest = tok.slice(j + 1)
+        const value = rest !== '' ? rest : argv[++i]
+        if (value === undefined) return `curl: option ${flag}: requires parameter`
+        const err = applyValue(args, valueKey, value)
+        if (err !== null) return err
+        break
+      }
+      continue
+    }
+    if (args.url === null) args.url = tok
+    else return `curl: only one URL per call is supported here (got '${tok}')`
+  }
+  return args
+}
+
+/** Old callers pass already-parsed flags; turn them back into argv. */
+function legacyArgv(flags: Record<string, string | boolean>): string[] {
+  const argv: string[] = []
+  for (const [k, v] of Object.entries(flags)) {
+    const flag = k.length === 1 ? `-${k}` : `--${k.replaceAll('_', '-')}`
+    if (v === true) argv.push(flag)
+    else if (typeof v === 'string') argv.push(flag, v)
+  }
+  return argv
+}
+
+async function readSource(spec: string, opts: CommandOpts): Promise<Uint8Array> {
+  if (spec === '-') {
+    const bytes = await readStdinAsync(opts.stdin)
+    return bytes ?? new Uint8Array()
+  }
+  if (opts.dispatch === undefined) throw new Error(`cannot read ${spec}`)
+  const [value] = await opts.dispatch('read', resolveTarget(spec, opts.cwd))
+  if (value instanceof Uint8Array) return value
+  if (typeof value === 'string') return ENC.encode(value)
+  throw new Error(`cannot read ${spec}`)
+}
+
+/** Build the request body the way curl joins -d/--data* values (with &). */
+async function buildBody(args: CurlArgs, opts: CommandOpts): Promise<string | null> {
+  if (args.data.length === 0) return null
+  const parts: string[] = []
+  for (const { kind, value } of args.data) {
+    if (kind === 'raw') {
+      parts.push(value)
+    } else if (kind === 'urlencode') {
+      const eq = value.indexOf('=')
+      const at = value.indexOf('@')
+      if (eq >= 0) parts.push(`${value.slice(0, eq + 1)}${encodeURIComponent(value.slice(eq + 1))}`)
+      else if (at >= 0) {
+        const content = DEC.decode(await readSource(value.slice(at + 1), opts))
+        const name = value.slice(0, at)
+        parts.push(`${name !== '' ? `${name}=` : ''}${encodeURIComponent(content)}`)
+      } else parts.push(encodeURIComponent(value))
+    } else if (value.startsWith('@')) {
+      let content = DEC.decode(await readSource(value.slice(1), opts))
+      // -d/--data strips newlines from a file; --data-binary and --json keep them.
+      if (kind === 'data') content = content.replace(/[\r\n]/g, '')
+      parts.push(content)
+    } else {
+      parts.push(value)
+    }
+  }
+  return parts.join('&')
+}
+
+function headerMap(lines: string[]): Record<string, string> {
+  // Keyed case-insensitively: a later -H for the same name replaces the
+  // earlier one, and an empty value ("X-Foo:") removes it, as in curl.
+  const byName = new Map<string, [string, string]>()
+  for (const line of lines) {
+    const idx = line.indexOf(':')
+    if (idx <= 0) continue
+    const name = line.slice(0, idx).trim()
+    const value = line.slice(idx + 1).trim()
+    if (value === '') byName.delete(name.toLowerCase())
+    else byName.set(name.toLowerCase(), [name, value])
+  }
+  return Object.fromEntries(byName.values())
+}
+
+function headerBlock(ex: HttpExchange): string {
+  const lines = [`HTTP/1.1 ${String(ex.status)} ${ex.statusText}`.trimEnd()]
+  for (const [k, v] of ex.headers) lines.push(`${k}: ${v}`)
+  return `${lines.join('\r\n')}\r\n\r\n`
+}
+
+function writeOut(format: string, ex: HttpExchange): string {
+  const vars: Record<string, string> = {
+    http_code: String(ex.status),
+    response_code: String(ex.status),
+    url_effective: ex.url,
+    size_download: String(ex.body.byteLength),
+    content_type: ex.headers.find(([k]) => k.toLowerCase() === 'content-type')?.[1] ?? '',
+  }
+  return format
+    .replace(/%\{(\w+)\}/g, (m, name: string) => vars[name] ?? m)
+    .replace(/\\n/g, '\n')
+    .replace(/\\t/g, '\t')
+    .replace(/\\r/g, '\r')
+}
+
+function fail(message: string, exitCode: number): CommandFnResult {
+  return [null, new IOResult({ exitCode, stderr: ENC.encode(`${message}\n`) })]
+}
+
+function concat(parts: Uint8Array[]): Uint8Array {
+  const out = new Uint8Array(parts.reduce((n, p) => n + p.byteLength, 0))
+  let off = 0
+  for (const p of parts) {
+    out.set(p, off)
+    off += p.byteLength
+  }
+  return out
+}
+
 async function curlCommand(
   _accessor: Accessor,
-  paths: PathSpec[],
+  _paths: PathSpec[],
   texts: string[],
   opts: CommandOpts,
 ): Promise<CommandFnResult> {
-  const H = typeof opts.flags.H === 'string' ? opts.flags.H : null
-  const A = typeof opts.flags.A === 'string' ? opts.flags.A : null
-  const X = typeof opts.flags.X === 'string' ? opts.flags.X : null
-  const d = typeof opts.flags.d === 'string' ? opts.flags.d : null
-  const F = typeof opts.flags.F === 'string' ? opts.flags.F : null
-  const o = typeof opts.flags.o === 'string' ? opts.flags.o : null
-  const L = opts.flags.L === true
-  const silent = opts.flags.s === true
-  const jina = opts.flags.jina === true
+  const parsed = parseCurlArgv([...legacyArgv(opts.flags), ...texts])
+  if (typeof parsed === 'string') return fail(parsed, 2)
+  const args = parsed
+  if (args.url === null) return fail('curl: no URL specified', 2)
 
-  const headers: Record<string, string> = {}
-  if (H !== null) {
-    const idx = H.indexOf(':')
-    if (idx > 0) {
-      headers[H.slice(0, idx).trim()] = H.slice(idx + 1).trim()
-    }
+  const headers = headerMap(args.headers)
+  if (
+    args.user !== null &&
+    !Object.keys(headers).some((k) => k.toLowerCase() === 'authorization')
+  ) {
+    headers.Authorization = `Basic ${btoa(args.user)}`
   }
-  if (A !== null) {
-    headers['User-Agent'] = A
-  }
-  const url = texts[0]
-  if (url === undefined) {
-    return [null, new IOResult({ exitCode: 1, stderr: ENC.encode('curl: missing URL\n') })]
-  }
-  let result: Uint8Array
+
+  let body: string | null
   try {
-    if (F !== null) {
-      const method = X ?? 'POST'
-      const eq = F.indexOf('=')
-      const key = eq >= 0 ? F.slice(0, eq) : F
-      const value = eq >= 0 ? F.slice(eq + 1) : ''
-      result = await httpFormRequest(url, {
-        method,
-        formData: { [key]: value },
+    body = await buildBody(args, opts)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return fail(`curl: ${msg}`, 26)
+  }
+  const isJson = args.data.some((d) => d.kind === 'json')
+  if (isJson) {
+    if (!Object.keys(headers).some((k) => k.toLowerCase() === 'content-type'))
+      headers['Content-Type'] = 'application/json'
+    if (!Object.keys(headers).some((k) => k.toLowerCase() === 'accept'))
+      headers.Accept = 'application/json'
+  } else if (
+    body !== null &&
+    !Object.keys(headers).some((k) => k.toLowerCase() === 'content-type')
+  ) {
+    headers['Content-Type'] = 'application/x-www-form-urlencoded'
+  }
+
+  let url = args.url
+  if (args.get && body !== null) {
+    url = `${url}${url.includes('?') ? '&' : '?'}${body}`
+    body = null
+  }
+  const method = args.head ? 'HEAD' : (args.method ?? (body !== null ? 'POST' : 'GET'))
+  const timeoutMs = args.maxTimeSec !== null ? args.maxTimeSec * 1000 : undefined
+
+  let ex: HttpExchange
+  try {
+    if (args.form.length > 0) {
+      const formData: Record<string, string> = {}
+      for (const field of args.form) {
+        const eq = field.indexOf('=')
+        formData[eq >= 0 ? field.slice(0, eq) : field] = eq >= 0 ? field.slice(eq + 1) : ''
+      }
+      const out = await httpFormRequest(url, {
+        method: args.method ?? 'POST',
+        formData,
         headers,
+        ...(timeoutMs !== undefined ? { timeoutMs } : {}),
       })
+      ex = { status: 200, statusText: 'OK', url, headers: [], body: out }
     } else {
-      const method = X ?? (d !== null ? 'POST' : 'GET')
-      const body = d !== null ? ENC.encode(d) : undefined
-      result = await httpRequest(url, {
+      ex = await httpExchange(url, {
         method,
         headers,
-        ...(body !== undefined ? { body } : {}),
-        jina,
-        followRedirects: L,
+        ...(body !== null ? { body: ENC.encode(body) } : {}),
+        ...(timeoutMs !== undefined ? { timeoutMs } : {}),
+        jina: args.jina,
+        followRedirects: args.location,
       })
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    return [null, new IOResult({ exitCode: 22, stderr: ENC.encode(`curl: ${msg}\n`) })]
+    const timedOut = msg.toLowerCase().includes('abort')
+    return fail(timedOut ? 'curl: (28) Operation timed out' : `curl: (6) ${msg}`, timedOut ? 28 : 6)
   }
-  if (o !== null) {
+
+  const stderr: string[] = []
+  if (args.verbose) {
+    stderr.push(`> ${method} ${url}`)
+    for (const [k, v] of Object.entries(headers)) stderr.push(`> ${k}: ${v}`)
+    stderr.push(`< HTTP/1.1 ${String(ex.status)} ${ex.statusText}`.trimEnd())
+    for (const [k, v] of ex.headers) stderr.push(`< ${k}: ${v}`)
+  }
+  const failed = args.fail && ex.status >= 400
+  if (failed && (!args.silent || args.showError)) {
+    stderr.push(`curl: (22) The requested URL returned error: ${String(ex.status)}`)
+  }
+
+  const shown: Uint8Array[] = []
+  if (args.include || args.head) shown.push(ENC.encode(headerBlock(ex)))
+  if (!args.head && !failed) shown.push(ex.body)
+  const payload = concat(shown)
+
+  const out: Uint8Array[] = []
+  const io: { writes?: Record<string, Uint8Array> } = {}
+  if (args.output !== null && args.output !== '-') {
     if (opts.dispatch !== undefined) {
-      const scope = resolveTarget(o, opts.cwd)
       try {
-        await opts.dispatch('write', scope, [result])
+        await opts.dispatch('write', resolveTarget(args.output, opts.cwd), [payload])
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err)
-        return [null, new IOResult({ exitCode: 1, stderr: ENC.encode(`curl: ${o}: ${errMsg}\n`) })]
+        return fail(`curl: (23) ${args.output}: ${errMsg}`, 23)
       }
     }
-    const msg = silent ? new Uint8Array() : ENC.encode(`saved to ${o}`)
-    return [msg, new IOResult({ writes: { [o]: result } })]
+    io.writes = { [args.output]: payload }
+  } else {
+    out.push(payload)
   }
-  return [result, new IOResult()]
+  if (args.writeOut !== null) out.push(ENC.encode(writeOut(args.writeOut, ex)))
+  const stdout = concat(out)
+  return [
+    stdout,
+    new IOResult({
+      exitCode: failed ? 22 : 0,
+      ...(stderr.length > 0 ? { stderr: ENC.encode(`${stderr.join('\n')}\n`) } : {}),
+      ...io,
+    }),
+  ]
 }
 
 export const GENERAL_CURL = command({
