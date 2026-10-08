@@ -305,7 +305,14 @@ export async function executeNode(
       session.cwd,
       callStack,
     )
-    const resolved = await resolveGlobs(classified, registry)
+    let resolved: Awaited<ReturnType<typeof resolveGlobs>>
+    try {
+      resolved = await resolveGlobs(classified, registry)
+    } catch (err) {
+      const failed = globFailure(err, 'for')
+      if (failed === null) throw err
+      return failed
+    }
     if (node.children[0]?.type === NT.SELECT) {
       return handleSelect(recurse, variable, resolved, body, session, stdin, callStack)
     }
@@ -729,7 +736,14 @@ async function runCommandBody(
   }
 
   const classified = classifyParts(expanded, registry, session.cwd, textArgs, pathArgs)
-  const resolved = await resolveGlobs(classified, registry, textArgs)
+  let resolved: Awaited<ReturnType<typeof resolveGlobs>>
+  try {
+    resolved = await resolveGlobs(classified, registry, textArgs)
+  } catch (err) {
+    const failed = globFailure(err, name)
+    if (failed === null) throw err
+    return failed
+  }
   const finalExpanded = resolved.map((p) => (p instanceof PathSpec ? p.original : p))
 
   // Unsupported bash builtins. Constructs the parser accepts but the
@@ -995,4 +1009,24 @@ export function classifyArgvBySpec(
   for (const v of flagTextValues) textSet.add(v)
   for (const v of flagPathValues) pathSet.add(v)
   return [textSet, pathSet]
+}
+
+/**
+ * A failed glob expansion fails the one command that used the pattern, as in
+ * bash with failglob: exit 1 with the message on stderr. Throwing instead
+ * aborted the whole script and discarded the output of commands that had
+ * already run. Non-glob errors return null and propagate unchanged.
+ */
+function globFailure(
+  err: unknown,
+  command: string,
+): [null, IOResult, ExecutionNode] | null {
+  const message = err instanceof Error ? err.message : String(err)
+  if (!message.startsWith('glob:')) return null
+  const stderr = new TextEncoder().encode(`${message}\n`)
+  return [
+    null,
+    new IOResult({ exitCode: 1, stderr }),
+    new ExecutionNode({ command, exitCode: 1, stderr }),
+  ]
 }
