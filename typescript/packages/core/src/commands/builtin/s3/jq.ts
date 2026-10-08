@@ -16,7 +16,6 @@ import type { S3Accessor } from '../../../accessor/s3.ts'
 import { read as s3Read } from '../../../core/s3/read.ts'
 import { resolveGlob } from '../../../core/s3/glob.ts'
 import { stat as s3Stat } from '../../../core/s3/stat.ts'
-import { isJsonlPath, isStreamableJsonlExpr } from '../../../core/jq/index.ts'
 import { runJq } from '../../../core/jq/run.ts'
 import { Precision, ProvisionResult } from '../../../provision/types.ts'
 import type { PathSpec } from '../../../types.ts'
@@ -36,15 +35,7 @@ export async function jqProvision(
   try {
     const s = await s3Stat(accessor, first)
     const fileSize = s.size ?? 0
-    if (isJsonlPath(first.original) && isStreamableJsonlExpr(expr)) {
-      return new ProvisionResult({
-        command: `jq '${expr}' ${first.original}`,
-        networkReadLow: 0,
-        networkReadHigh: fileSize,
-        readOps: 1,
-        precision: Precision.RANGE,
-      })
-    }
+    // runJq reads every operand in full (no JSONL streaming path).
     return new ProvisionResult({
       command: `jq '${expr}' ${first.original}`,
       networkReadLow: fileSize,

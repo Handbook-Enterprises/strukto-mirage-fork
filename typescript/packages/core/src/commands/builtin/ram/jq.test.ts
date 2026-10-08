@@ -266,4 +266,16 @@ describe('jq command — real jq semantics', () => {
     expect(r.exitCode).toBe(2)
     expect(r.err).toMatch(/--arg name value/)
   })
+
+  it('takes the -e status from the last output across files', async () => {
+    const files = { '/f.json': 'false', '/t.json': 'true' }
+    expect((await runCli('jq -e . /f.json /t.json', null, files)).exitCode).toBe(0)
+    expect((await runCli('jq -e . /t.json /f.json', null, files)).exitCode).toBe(1)
+  })
+
+  it('rejects -L instead of reading the filter as a file', async () => {
+    const r = await runCli('jq -L /modules .a', '{"a":1}')
+    expect(r.exitCode).toBe(2)
+    expect(r.err).toMatch(/--library-path is not supported/)
+  })
 })

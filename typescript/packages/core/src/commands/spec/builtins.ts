@@ -409,8 +409,16 @@ export const BUILTIN_SPECS: Readonly<Record<string, CommandSpec>> = Object.freez
       ...JQ_BOOL_FLAGS.map(
         (f) => new Option({ short: f.short ?? null, long: f.long, description: f.description }),
       ),
+      // Unsupported flags are declared so they never shift the filter into the
+      // file slot; runJq rejects them. -L takes a directory.
       ...JQ_UNSUPPORTED_FLAGS.map(
-        (f) => new Option({ long: f.long, description: `Unsupported; ${f.hint}.` }),
+        (f) =>
+          new Option({
+            short: f.short ?? null,
+            long: f.long,
+            valueKind: f.short === '-L' ? OperandKind.TEXT : OperandKind.NONE,
+            description: `Unsupported; ${f.hint}.`,
+          }),
       ),
       new Option({
         long: '--indent',

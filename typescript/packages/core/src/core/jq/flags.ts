@@ -119,7 +119,9 @@ export const JQ_BOOL_FLAGS: readonly JqBoolFlag[] = [
 
 // $ARGS positional modes: jq-wasm always appends its input file after the
 // filter, so these cannot be forwarded faithfully. Reject instead of misreading.
-export const JQ_UNSUPPORTED_FLAGS: readonly { long: string; hint: string }[] = [
+export const JQ_UNSUPPORTED_FLAGS: readonly { short?: string; long: string; hint: string }[] = [
   { long: '--args', hint: 'use --arg name value' },
   { long: '--jsonargs', hint: 'use --argjson name json' },
+  // Modules need a filesystem jq-wasm does not have.
+  { short: '-L', long: '--library-path', hint: 'inline the module definitions in the filter' },
 ]

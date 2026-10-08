@@ -117,7 +117,10 @@ export async function runJq(
 ): Promise<CommandFnResult> {
   const flags = opts.flags
   for (const f of JQ_UNSUPPORTED_FLAGS) {
-    if (isOn(flags, f)) return fail(`jq: ${f.long} is not supported here; ${f.hint}\n`, 2)
+    const used =
+      isOn(flags, f) ||
+      [f.short, f.long].some((n) => n !== undefined && flags[key(n)] !== undefined)
+    if (used) return fail(`jq: ${f.long} is not supported here; ${f.hint}\n`, 2)
   }
 
   const readText = async (p: PathSpec): Promise<string> => {
@@ -184,16 +187,24 @@ export async function runJq(
     const joined = jqFlags.includes('-j') || jqFlags.includes('--raw-output0')
     let stdout = ''
     let stderr = ''
-    let exitCode = 0
+    // jq's status: an error (>= 2) wins; otherwise, under -e, the status of
+    // the last output, which belongs to the last run.
+    let errorCode = 0
+    let lastCode = 0
     for (const run of runs) {
       const result = await jqWasm.raw(run.input, filter, [...jqFlags, ...run.extra])
-      // Unpatched jq-wasm trims its output; restore jq's trailing newline.
+      // Upstream jq-wasm trims stdout, which loses real leading/trailing
+      // whitespace of raw output; hosts should carry a jq-wasm patch that
+      // removes the trim (see ve-brain's patches/jq-wasm). This only restores
+      // the trailing newline jq would have printed.
       stdout += joined ? result.stdout : withNewline(result.stdout)
       stderr += withNewline(result.stderr)
-      exitCode = Math.max(exitCode, result.exitCode)
+      if (result.exitCode >= 2) errorCode = Math.max(errorCode, result.exitCode)
+      else lastCode = result.exitCode
       // A compile error repeats identically for every file.
       if (result.exitCode === 3) break
     }
+    const exitCode = errorCode !== 0 ? errorCode : lastCode
     return [ENC.encode(stdout), new IOResult({ exitCode, stderr: ENC.encode(stderr) })]
   } catch (err) {
     if (err instanceof JqReadError) return fail(err.message, 2)
