@@ -65,17 +65,17 @@ describe('workspace: cd expands a glob like bash', () => {
   it('refuses a pattern that matches several directories', async () => {
     const { ws } = await makeWorkspace()
     await ws.execute('mkdir -p /ram/report-a /ram/report-b')
-    const io = await ws.execute('cd /ram/report-*; pwd')
+    const io = await ws.execute('cd /ram/report-*; echo "status=$?"; pwd')
     expect(stderrStr(io)).toContain('cd: too many arguments')
-    expect(stdoutStr(io)).not.toContain('/ram/report-')
+    expect(stdoutStr(io)).toBe('status=1\n/s3\n')
     await ws.close()
   })
 
   it('reports an unmatched pattern and stays put', async () => {
     const { ws } = await makeWorkspace()
-    const io = await ws.execute('cd /ram/zzz*; pwd')
+    const io = await ws.execute('cd /ram/zzz*; echo "status=$?"; pwd')
     expect(stderrStr(io)).toContain("glob: no matches for pattern '/ram/zzz*'")
-    expect(stdoutStr(io)).toBe('/s3\n')
+    expect(stdoutStr(io)).toBe('status=1\n/s3\n')
     await ws.close()
   })
 })
