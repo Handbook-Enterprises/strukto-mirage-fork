@@ -21,6 +21,7 @@ import { FileType, PathSpec, ResourceName } from '../../../../types.ts'
 import { command, type CommandFnResult, type CommandOpts } from '../../../config.ts'
 import { formatLsLong } from '../../utils/formatting.ts'
 import { specOf } from '../../../spec/builtins.ts'
+import { joinLines } from '../../utils/lines.ts'
 
 function childSpec(entryPath: string, prefix: string): PathSpec {
   return new PathSpec({
@@ -145,10 +146,10 @@ async function lsCommand(
       }
     }
     appendListing(collected, long, human, classify, lines)
-    const out: ByteSource = new TextEncoder().encode(lines.join('\n'))
+    const out: ByteSource = new TextEncoder().encode(joinLines(lines))
     const exitCode = warnings.length > 0 && lines.length === 0 ? 1 : 0
     if (warnings.length > 0) {
-      const stderr = new TextEncoder().encode(warnings.join('\n'))
+      const stderr = new TextEncoder().encode(joinLines(warnings))
       return [out, new IOResult({ stderr, exitCode })]
     }
     return [out, new IOResult({ exitCode })]
@@ -162,10 +163,10 @@ async function lsCommand(
       if (i > 0) lines.push('')
       await walkRecursive(accessor, p, walkOpts, targets.length > 1 || true, lines, warnings)
     }
-    const out: ByteSource = new TextEncoder().encode(lines.join('\n'))
+    const out: ByteSource = new TextEncoder().encode(joinLines(lines))
     const exitCode = warnings.length > 0 && lines.length === 0 ? 1 : 0
     if (warnings.length > 0) {
-      const stderr = new TextEncoder().encode(warnings.join('\n'))
+      const stderr = new TextEncoder().encode(joinLines(warnings))
       return [out, new IOResult({ stderr, exitCode })]
     }
     return [out, new IOResult({ exitCode })]
@@ -186,10 +187,10 @@ async function lsCommand(
     }
     appendListing(sortStats(stats, sortBy, reverse), long, human, classify, lines)
   }
-  const out: ByteSource = new TextEncoder().encode(lines.join('\n'))
+  const out: ByteSource = new TextEncoder().encode(joinLines(lines))
   const exitCode = warnings.length > 0 && lines.length === 0 ? 1 : 0
   if (warnings.length > 0) {
-    const stderr = new TextEncoder().encode(warnings.join('\n'))
+    const stderr = new TextEncoder().encode(joinLines(warnings))
     return [out, new IOResult({ stderr, exitCode })]
   }
   return [out, new IOResult({ exitCode })]
