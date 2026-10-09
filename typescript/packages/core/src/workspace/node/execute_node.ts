@@ -769,9 +769,19 @@ async function runCommandBody(
   }
 
   if (name === SB.CD) {
+    // Use the glob-expanded arguments, as bash does: `cd /data/report*`
+    // enters the one matching directory.
+    if (resolved.length > 2) {
+      const err = new TextEncoder().encode('cd: too many arguments\n')
+      return [
+        null,
+        new IOResult({ exitCode: 1, stderr: err }),
+        new ExecutionNode({ command: 'cd', exitCode: 1, stderr: err }),
+      ]
+    }
     let path: string | PathSpec = '/'
-    if (classified.length > 1) {
-      const raw = classified[1]
+    if (resolved.length > 1) {
+      const raw = resolved[1]
       const rawStr = raw instanceof PathSpec ? raw.original : String(raw)
       if (rawStr === '~') path = '/'
       else if (raw instanceof PathSpec) path = raw

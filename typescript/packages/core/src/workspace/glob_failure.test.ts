@@ -51,3 +51,31 @@ describe('workspace: a failed glob fails only its own command', () => {
     await ws.close()
   })
 })
+
+describe('workspace: cd expands a glob like bash', () => {
+  it('enters the single matching directory', async () => {
+    const { ws } = await makeWorkspace()
+    await ws.execute('mkdir -p /ram/report-2026/in /ram/other')
+    const io = await ws.execute('cd /ram/rep* && pwd')
+    expect(io.exitCode).toBe(0)
+    expect(stdoutStr(io)).toBe('/ram/report-2026\n')
+    await ws.close()
+  })
+
+  it('refuses a pattern that matches several directories', async () => {
+    const { ws } = await makeWorkspace()
+    await ws.execute('mkdir -p /ram/report-a /ram/report-b')
+    const io = await ws.execute('cd /ram/report-*; pwd')
+    expect(stderrStr(io)).toContain('cd: too many arguments')
+    expect(stdoutStr(io)).not.toContain('/ram/report-')
+    await ws.close()
+  })
+
+  it('reports an unmatched pattern and stays put', async () => {
+    const { ws } = await makeWorkspace()
+    const io = await ws.execute('cd /ram/zzz*; pwd')
+    expect(stderrStr(io)).toContain("glob: no matches for pattern '/ram/zzz*'")
+    expect(stdoutStr(io)).toBe('/s3\n')
+    await ws.close()
+  })
+})
