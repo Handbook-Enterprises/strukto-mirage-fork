@@ -14,6 +14,7 @@
 
 import type { Resource } from '../../resource/base.ts'
 import { PathSpec, ResourceName } from '../../types.ts'
+import { isPathVisible, runWithMountFilter } from '../../utils/mount_filter.ts'
 import { posixNormpath } from '../expand/classify.ts'
 import type { MountRegistry } from '../mount/registry.ts'
 
@@ -57,7 +58,17 @@ export async function resolveGlobs(
         prefix,
       })
       try {
-        const resolved = await mount.resource.glob([withPrefix], prefix)
+        // A mount's include/exclude globs hide entries from listings through a
+        // context Mount.executeCmd sets only while a command runs, which is
+        // after expansion. Run the resource's glob inside that context so its
+        // readdir drops hidden entries before any result cap applies, then
+        // filter again for resources whose listing does not consult it.
+        const filter = mount.filter
+        const resource = mount.resource
+        const listed = await runWithMountFilter(filter, () => resource.glob([withPrefix], prefix))
+        const resolved = listed.filter(
+          (p) => filter === null || isPathVisible(posixNormpath(p.original), filter),
+        )
         if (resolved.length === 0) {
           throw new Error(`glob: no matches for pattern '${item.original}'`)
         }

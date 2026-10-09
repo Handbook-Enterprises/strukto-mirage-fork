@@ -135,4 +135,57 @@ describe('mount path-glob filter (integration)', () => {
     expect(names).toContain('channels')
     await ws.close()
   })
+
+  it('a wildcard does not expand to excluded entries', async () => {
+    const ws = await filteredWs({ '/ram': { excludeGlobs: ['dms/**'] } })
+    const res = await ws.execute('echo /ram/*')
+    expect(res.stdoutText).toContain('/ram/channels')
+    expect(res.stdoutText).not.toContain('/ram/dms')
+    await ws.close()
+  })
+
+  it('a wildcard matching only excluded entries reports no matches', async () => {
+    const ws = await filteredWs({ '/ram': { excludeGlobs: ['dms/**'] } })
+    const res = await ws.execute('cat /ram/dms/*.txt')
+    expect(res.exitCode).not.toBe(0)
+    expect(res.stdoutText).not.toContain('secret')
+    expect(res.stderrText).not.toContain('alex.txt')
+    await ws.close()
+  })
+
+  it('includeGlobs limit what a wildcard can match', async () => {
+    const ws = await filteredWs({ '/ram': { includeGlobs: ['channels/**'] } })
+    const res = await ws.execute('echo /ram/*')
+    expect(res.stdoutText).toBe('/ram/channels\n')
+    await ws.close()
+  })
+
+  it('filters before a resource caps its glob results', async () => {
+    // Stand-in for a capped glob (RAM and S3 truncate large result sets):
+    // keep only the first match. The hidden file sorts first, so filtering
+    // after the cap would leave nothing.
+    class CappedRam extends RAMResource {
+      override async glob(
+        paths: Parameters<RAMResource['glob']>[0],
+        prefix?: string,
+      ): ReturnType<RAMResource['glob']> {
+        return (await super.glob(paths, prefix)).slice(0, 1)
+      }
+    }
+    const ram = new CappedRam()
+    const seedWs = new Workspace({ '/ram': ram }, { mode: MountMode.WRITE, shellParser: parser })
+    await seedWs.execute('echo hidden > /ram/a-hidden.txt; echo visible > /ram/b-visible.txt')
+    await seedWs.close()
+    const ws = new Workspace(
+      { '/ram': ram },
+      {
+        mode: MountMode.WRITE,
+        shellParser: parser,
+        mountFilters: { '/ram': { excludeGlobs: ['a-hidden.txt'] } },
+      },
+    )
+    const res = await ws.execute('cat /ram/*.txt')
+    expect(res.stdoutText).toBe('visible\n')
+    await ws.close()
+  })
 })
