@@ -135,4 +135,28 @@ describe('mount path-glob filter (integration)', () => {
     expect(names).toContain('channels')
     await ws.close()
   })
+
+  it('a wildcard does not expand to excluded entries', async () => {
+    const ws = await filteredWs({ '/ram': { excludeGlobs: ['dms/**'] } })
+    const res = await ws.execute('echo /ram/*')
+    expect(res.stdoutText).toContain('/ram/channels')
+    expect(res.stdoutText).not.toContain('/ram/dms')
+    await ws.close()
+  })
+
+  it('a wildcard matching only excluded entries reports no matches', async () => {
+    const ws = await filteredWs({ '/ram': { excludeGlobs: ['dms/**'] } })
+    const res = await ws.execute('cat /ram/dms/*.txt')
+    expect(res.exitCode).not.toBe(0)
+    expect(res.stdoutText).not.toContain('secret')
+    expect(res.stderrText).not.toContain('alex.txt')
+    await ws.close()
+  })
+
+  it('includeGlobs limit what a wildcard can match', async () => {
+    const ws = await filteredWs({ '/ram': { includeGlobs: ['channels/**'] } })
+    const res = await ws.execute('echo /ram/*')
+    expect(res.stdoutText).toBe('/ram/channels\n')
+    await ws.close()
+  })
 })
