@@ -210,3 +210,56 @@ describe('read unknown', () => {
     ).rejects.toMatchObject({ code: 'ENOENT' })
   })
 })
+
+describe('read on a cold index', () => {
+  // A bare index.get threw ENOENT whenever the index was empty (e.g. after an
+  // isolate restart) even though the path exists. read now re-lists the parent
+  // on a miss, as stat does, and retries the lookup.
+  it('lists the channels and then reads chat.jsonl', async () => {
+    const idx = new RAMIndexCacheStore()
+    const t = new FakeTransport((endpoint) => {
+      if (endpoint === 'conversations.list') {
+        return {
+          ok: true,
+          channels: [{ id: 'C1', name: 'general', created: 1000 }],
+          response_metadata: { next_cursor: '' },
+        }
+      }
+      if (endpoint === 'conversations.history') {
+        return { ok: true, messages: [{ ts: '100.0', text: 'hello' }] }
+      }
+      return { ok: true }
+    })
+    const out = await read(
+      new SlackAccessor(t),
+      spec('/mnt/slack/channels/general__C1/2026-04-24/chat.jsonl', '/mnt/slack'),
+      idx,
+    )
+    expect(JSON.parse(decoder.decode(out).trimEnd())).toMatchObject({ text: 'hello' })
+    const endpoints = t.calls.map((c) => c.endpoint)
+    expect(endpoints.indexOf('conversations.list')).toBeLessThan(
+      endpoints.indexOf('conversations.history'),
+    )
+    expect((await idx.get('/mnt/slack/channels/general__C1')).entry?.id).toBe('C1')
+  })
+
+  it('lists the users and then reads a user profile', async () => {
+    const idx = new RAMIndexCacheStore()
+    const t = new FakeTransport((endpoint) => {
+      if (endpoint === 'users.list') {
+        return { ok: true, members: [{ id: 'U1', name: 'alice' }] }
+      }
+      if (endpoint === 'users.info') {
+        return { ok: true, user: { id: 'U1', name: 'alice' } }
+      }
+      return { ok: true }
+    })
+    const out = await read(
+      new SlackAccessor(t),
+      spec('/mnt/slack/users/alice__U1.json', '/mnt/slack'),
+      idx,
+    )
+    expect(JSON.parse(decoder.decode(out))).toMatchObject({ id: 'U1', name: 'alice' })
+    expect(t.calls.map((c) => c.endpoint)).toContain('users.list')
+  })
+})

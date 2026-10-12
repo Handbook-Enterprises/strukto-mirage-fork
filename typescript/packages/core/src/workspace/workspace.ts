@@ -48,7 +48,14 @@ import {
 } from '../snapshot/state.ts'
 import { captureFingerprints, checkDrift, liveOnlyMountPrefixes } from './snapshot/drift.ts'
 import { FORMAT_VERSION } from './snapshot/utils.ts'
-import { DEFAULT_AGENT_ID, DriftPolicy, FileType, MountMode, type PathSpec } from '../types.ts'
+import {
+  DEFAULT_AGENT_ID,
+  DriftPolicy,
+  FileType,
+  MountMode,
+  type FileStat,
+  type PathSpec,
+} from '../types.ts'
 import type { TSNodeLike } from './expand/variable.ts'
 import type { ExecuteFn } from './expand/node.ts'
 import type { DispatchFn } from './executor/cross_mount.ts'
@@ -427,6 +434,45 @@ export class Workspace {
         }
       }
       switch (op) {
+        case 'READ_RANGE': {
+          // Bounded read: `bytes` carries a JSON `[offset, length]` pair. The
+          // 64 KiB ceiling keeps a bridged runtime from pulling a whole large
+          // file into isolate memory one oversized "range" at a time.
+          let range: unknown
+          try {
+            range = JSON.parse(new TextDecoder().decode(bytes))
+          } catch {
+            // Malformed JSON is reported as EINVAL below.
+          }
+          if (!Array.isArray(range) || range.length !== 2)
+            throw Object.assign(new Error('Invalid read range'), { code: 'EINVAL' })
+          const [offset, length] = range as [number, number]
+          if (
+            !Number.isSafeInteger(offset) ||
+            !Number.isSafeInteger(length) ||
+            offset < 0 ||
+            length < 0 ||
+            length > 65536 ||
+            !Number.isSafeInteger(offset + length) ||
+            offset === Number.MAX_SAFE_INTEGER
+          ) {
+            throw Object.assign(
+              new Error(
+                'Invalid read range: offset must be nonnegative and length must be 0..65536 bytes',
+              ),
+              { code: 'EINVAL' },
+            )
+          }
+          const [resource, spec] = await this.resolve(path)
+          if (!resource.readRange)
+            throw Object.assign(new Error('Resource does not support bounded reads'), {
+              code: 'ENOTSUP',
+            })
+          const out = await resource.readRange(spec, offset, length)
+          if (!(out instanceof Uint8Array) || out.length > length)
+            throw Object.assign(new Error('Invalid bounded read response'), { code: 'EIO' })
+          return out
+        }
         case 'READ':
           return await this.fs.readFile(path)
         case 'WRITE': {
@@ -444,7 +490,18 @@ export class Workspace {
             // Don't leak (or stat) entries the mount filter would hide — the
             // shell hides them from ls/find, so a bridged runtime must too.
             if (enforce && !this.isBridgePathVisible(entry)) continue
-            const stat = await this.fs.stat(entry)
+            // An entry that vanished between the listing and its stat (an
+            // eventually consistent store, e.g. Drive right after a delete) is
+            // skipped rather than allowed to fail the whole listing.
+            let stat: FileStat
+            try {
+              stat = await this.fs.stat(entry)
+            } catch (err) {
+              const code = (err as { code?: unknown } | null)?.code ?? ''
+              const message = err instanceof Error ? err.message : ''
+              if (code === 'ENOENT' || message.startsWith('ENOENT')) continue
+              throw err
+            }
             const isDir = stat.type === FileType.DIRECTORY
             const size = isDir ? 0 : (stat.size ?? 0)
             result.push({ path: entry, size, isDir })

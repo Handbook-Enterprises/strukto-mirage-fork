@@ -207,3 +207,29 @@ describe('handleCrossMount — multi-read cat/head/tail/grep/wc', () => {
     expect(text).toMatch(/1 1 \d+ \/disk\/b/)
   })
 })
+
+describe('handleCrossMount — operand count', () => {
+  // crossCp/crossMv read scopes[0] and write scopes[1]; a third operand used to
+  // be ignored silently, so `cp a b c` overwrote b and reported success.
+  it.each(['cp', 'mv'])('%s refuses more than 2 paths before any I/O', async (cmd) => {
+    const dispatch = vi.fn<
+      (
+        op: string,
+        p: PathSpec,
+        args?: readonly unknown[],
+        kw?: Record<string, unknown>,
+      ) => Promise<[unknown, IOResult]>
+    >(() => Promise.resolve<[unknown, IOResult]>([null, new IOResult()]))
+    const paths = [
+      PathSpec.fromStrPath('/ram/a'),
+      PathSpec.fromStrPath('/ram/b'),
+      PathSpec.fromStrPath('/disk/c'),
+    ]
+    const [, io] = await handleCrossMount(cmd, paths, [], dispatch, `${cmd} /ram/a /ram/b /disk/c`)
+    expect(io.exitCode).toBe(1)
+    expect(decode(io.stderr as Uint8Array)).toBe(
+      `${cmd}: ${cmd} requires exactly 2 paths across mounts\n`,
+    )
+    expect(dispatch).not.toHaveBeenCalled()
+  })
+})

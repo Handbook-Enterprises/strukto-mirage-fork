@@ -29,9 +29,11 @@ export interface FSLike {
  * and metadata ops exist for richer runtimes (e.g. a Node-style `node:fs`) and
  * are ignored by the Python path, which never issues them. The trailing `bytes`
  * carries the file contents for `WRITE` and the UTF-8-encoded destination path
- * for `RENAME`.
+ * for `RENAME`, and a JSON `[offset, length]` pair for `READ_RANGE` (a bounded
+ * read served by `Resource.readRange`).
  */
 export type BridgeOp =
+  | 'READ_RANGE'
   | 'READ'
   | 'WRITE'
   | 'LIST'

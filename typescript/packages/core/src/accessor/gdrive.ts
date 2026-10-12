@@ -14,6 +14,8 @@
 
 import { GoogleApiAccessor } from './google_api.ts'
 import type { TokenManager } from '../core/google/_client.ts'
+import type { DriveVfsEntry } from '../core/gdrive/readdir.ts'
+import type { IndexCacheStore } from '../cache/index/store.ts'
 
 /** Scope the GDrive mount to a specific root in the user's Drive.
  *
@@ -38,6 +40,19 @@ export interface DriveRootScope {
 
 export class GDriveAccessor extends GoogleApiAccessor {
   readonly rootScope: DriveRootScope
+
+  /**
+   * Optional hook applied to every fresh Drive folder listing before it is
+   * cached and returned. Drive's listing lags the mount's own creates, deletes
+   * and renames by seconds, and a lagging listing would otherwise be cached
+   * for the index TTL; the host can use this to reconcile it with the changes
+   * it just made. `virtualKey` is the listed folder's index key.
+   */
+  reconcileListing?: (
+    index: IndexCacheStore | undefined,
+    virtualKey: string,
+    entries: DriveVfsEntry[],
+  ) => DriveVfsEntry[] | Promise<DriveVfsEntry[]>
 
   constructor(opts: { tokenManager: TokenManager; rootScope?: DriveRootScope }) {
     super({ tokenManager: opts.tokenManager })

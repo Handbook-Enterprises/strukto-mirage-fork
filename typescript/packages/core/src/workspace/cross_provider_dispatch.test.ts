@@ -75,6 +75,8 @@ describe('cross-resource dispatch (port of test_cross_provider_dispatch.py)', ()
     const io = await ws.execute('nocross /m1/a.txt /m2/b.txt')
     expect(io.exitCode).toBe(1)
     expect(stderrStr(io)).toContain('cross-mount not supported')
+    // The refusal names the reason and a way forward, not just the failure.
+    expect(stderrStr(io)).toContain('each mount uses its own credential')
     await ws.close()
   })
 

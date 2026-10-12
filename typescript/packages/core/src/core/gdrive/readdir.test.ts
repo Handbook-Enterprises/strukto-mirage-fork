@@ -21,11 +21,12 @@ vi.mock('../google/drive.ts', async () => {
 })
 
 import { GDriveAccessor } from '../../accessor/gdrive.ts'
+import { IndexEntry } from '../../cache/index/config.ts'
 import { RAMIndexCacheStore } from '../../cache/index/ram.ts'
 import { PathSpec } from '../../types.ts'
 import type { TokenManager } from '../google/_client.ts'
 import * as drive from '../google/drive.ts'
-import { readdir } from './readdir.ts'
+import { readdir, type DriveVfsEntry } from './readdir.ts'
 
 const FOLDER_MIME = 'application/vnd.google-apps.folder'
 
@@ -91,5 +92,60 @@ describe('readdir parent recursion', () => {
     await expect(
       readdir(accessor, new PathSpec({ original: '/docs', directory: '/docs' }), index),
     ).rejects.toThrow(/ENOENT/)
+  })
+})
+
+describe('readdir reconcileListing hook', () => {
+  // Drive's listing lags the mount's own changes by seconds; the accessor hook
+  // lets the host correct it before it is cached for the index TTL.
+  it('applies the hook to the listing before caching and returning it', async () => {
+    vi.mocked(drive.listFiles).mockResolvedValue([
+      {
+        id: 'old',
+        name: 'deleted.txt',
+        mimeType: 'text/plain',
+        modifiedTime: '2026-04-01T00:00:00.000Z',
+      },
+    ])
+    const accessor = makeAccessor()
+    const index = new RAMIndexCacheStore()
+    const hook = vi.fn(
+      (_index: unknown, _key: string, entries: DriveVfsEntry[]): DriveVfsEntry[] => [
+        ...entries.filter((e) => e.name !== 'deleted.txt'),
+        {
+          name: 'created.txt',
+          isDir: false,
+          entry: new IndexEntry({ id: 'new', name: 'created.txt', resourceType: 'gdrive/file' }),
+        },
+      ],
+    )
+    accessor.reconcileListing = hook
+
+    const out = await readdir(accessor, new PathSpec({ original: '/', directory: '/' }), index)
+
+    expect(out).toEqual(['/created.txt'])
+    expect(hook).toHaveBeenCalledTimes(1)
+    expect(hook.mock.calls[0]?.[0]).toBe(index)
+    expect((await index.get('/created.txt')).entry?.id).toBe('new')
+    expect((await index.get('/deleted.txt')).entry ?? null).toBeNull()
+  })
+
+  it('awaits an async hook', async () => {
+    vi.mocked(drive.listFiles).mockResolvedValue([])
+    const accessor = makeAccessor()
+    accessor.reconcileListing = () =>
+      Promise.resolve([
+        {
+          name: 'late.txt',
+          isDir: false,
+          entry: new IndexEntry({ id: 'late', name: 'late.txt', resourceType: 'gdrive/file' }),
+        },
+      ])
+    const out = await readdir(
+      accessor,
+      new PathSpec({ original: '/', directory: '/' }),
+      new RAMIndexCacheStore(),
+    )
+    expect(out).toEqual(['/late.txt'])
   })
 })

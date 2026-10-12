@@ -37,6 +37,9 @@ export class HttpGitHubTransport implements GitHubTransport {
       headers: {
         Authorization: `Bearer ${this.token}`,
         Accept: 'application/vnd.github+json',
+        // GitHub rejects API requests without a User-Agent (403), and runtimes
+        // such as Cloudflare Workers do not add one to fetch() by default.
+        'User-Agent': 'viewengine-ve-brain',
         'X-GitHub-Api-Version': GITHUB_API_VERSION,
       },
     })

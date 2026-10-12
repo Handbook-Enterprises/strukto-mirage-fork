@@ -127,7 +127,13 @@ async function readdirImpl(
   }
 
   const files = await listFiles(accessor.tokenManager, { folderId })
-  const entries: DriveVfsEntry[] = files.map(driveFileToEntry)
+  let entries: DriveVfsEntry[] = files.map(driveFileToEntry)
+  // Drive's folder listing lags the mount's own creates, deletes and renames
+  // by seconds. Let the accessor reconcile it with those changes before it is
+  // cached for the index TTL and returned.
+  if (typeof accessor.reconcileListing === 'function') {
+    entries = await accessor.reconcileListing(index, virtualKey, entries)
+  }
 
   if (index !== undefined) {
     await index.setDir(

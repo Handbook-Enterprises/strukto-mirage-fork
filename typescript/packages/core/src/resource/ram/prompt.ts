@@ -14,4 +14,8 @@
 
 export const RAM_PROMPT = `{prefix}
   In-memory filesystem. Files and directories are created on demand.
-  Standard commands: ls, cat, head, tail, grep, wc, find, tree, mkdir, touch, cp, mv, rm, tee, echo > file.`
+  Standard commands: ls, cat, head, tail, grep, wc, find, tree, mkdir, touch, cp, mv, rm, tee, echo > file.
+  Held in the Durable Object isolate's memory (~128 MB, shared with co-tenant
+  workspaces). A single oversized file, or unzipping a large archive here,
+  can exceed that limit and reset the isolate, which wipes all of /ram. Stage
+  and process large files in /transfer (R2, no size limit) instead.`
