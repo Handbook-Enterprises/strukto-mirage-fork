@@ -117,7 +117,7 @@ openai      = ["openai>=2.30.0", "openai-agents>=0.14.7"]
 # --- pydantic-ai ---
 pydantic-ai = [
     "pydantic-ai-slim>=1.35",
-    "pydantic-ai-backend>=0.1.0",
+    "pydantic-ai-backend>=0.1.0,<0.2.30",  # 0.2.30 removed SandboxProtocol
     "mirage-ai[pdf]",
 ]
 
