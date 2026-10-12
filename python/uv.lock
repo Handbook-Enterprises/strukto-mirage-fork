@@ -3574,7 +3574,7 @@ requires-dist = [
     { name = "pillow", specifier = ">=12.2.0" },
     { name = "pillow", marker = "extra == 'pdf'", specifier = ">=12.2.0" },
     { name = "pyarrow", marker = "extra == 'parquet'", specifier = ">=15.0" },
-    { name = "pydantic-ai-backend", marker = "extra == 'pydantic-ai'", specifier = ">=0.1.0" },
+    { name = "pydantic-ai-backend", marker = "extra == 'pydantic-ai'", specifier = ">=0.1.0,<0.2.30" },
     { name = "pydantic-ai-slim", marker = "extra == 'pydantic-ai'", specifier = ">=1.35" },
     { name = "pyjwt", extras = ["crypto"], specifier = ">=2.10" },
     { name = "pypdfium2", specifier = ">=5.7.0" },
@@ -3591,7 +3591,7 @@ requires-dist = [
     { name = "typer", specifier = ">=0.12.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.41.0" },
 ]
-provides-extras = ["s3", "r2", "gcs", "oci", "ssh", "fuse", "mongodb", "postgres", "redis", "email", "parquet", "hdf5", "pdf", "audio", "langfuse", "anthropic", "openai", "pydantic-ai", "deepagents", "openhands", "camel", "daytona", "databricks", "all"]
+provides-extras = ["s3", "r2", "gcs", "oci", "databricks", "ssh", "fuse", "mongodb", "postgres", "redis", "email", "parquet", "hdf5", "pdf", "audio", "langfuse", "anthropic", "openai", "pydantic-ai", "deepagents", "openhands", "camel", "daytona", "all"]
 
 [package.metadata.requires-dev]
 dev = [
