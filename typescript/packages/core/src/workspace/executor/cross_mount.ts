@@ -93,6 +93,9 @@ export async function handleCrossMount(
 }
 
 async function crossCp(scopes: PathSpec[], dispatch: DispatchFn, cmdStr: string): Promise<Result> {
+  // Only scopes[0] is read and scopes[1] written, so extra operands would be
+  // silently ignored (and the wrong file overwritten). Refuse them up front.
+  if (scopes.length !== 2) throw new Error('cp requires exactly 2 paths across mounts')
   const [src, dst] = [scopes[0], scopes[1]]
   if (src === undefined || dst === undefined) throw new Error('cp requires 2 paths')
   const [data] = await dispatch('read', src)
@@ -101,6 +104,8 @@ async function crossCp(scopes: PathSpec[], dispatch: DispatchFn, cmdStr: string)
 }
 
 async function crossMv(scopes: PathSpec[], dispatch: DispatchFn, cmdStr: string): Promise<Result> {
+  // See crossCp: refuse operand counts other than two before any I/O.
+  if (scopes.length !== 2) throw new Error('mv requires exactly 2 paths across mounts')
   const [src, dst] = [scopes[0], scopes[1]]
   if (src === undefined || dst === undefined) throw new Error('mv requires 2 paths')
   const [data] = await dispatch('read', src)

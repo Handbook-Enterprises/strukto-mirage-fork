@@ -22,13 +22,17 @@ import { PathSpec, ResourceName } from '../../../types.ts'
 import { inflateRaw } from '../../../utils/compress.ts'
 import { command, type CommandFnResult, type CommandOpts } from '../../config.ts'
 import { specOf } from '../../spec/builtins.ts'
+import { UNZIP_MAX_UNCOMPRESSED_BYTES, unzipTooBig } from '../utils/unzip_limit.ts'
 
 const ENC = new TextEncoder()
 const DEC = new TextDecoder('utf-8', { fatal: false })
 
-interface ZipEntry {
+interface ZipHeader {
   name: string
   size: number
+}
+
+interface ZipEntry extends ZipHeader {
   data: Uint8Array
 }
 
@@ -48,6 +52,7 @@ function readU32LE(data: Uint8Array, offset: number): number {
 
 async function readZipEntries(data: Uint8Array): Promise<ZipEntry[]> {
   const entries: ZipEntry[] = []
+  let inflated = 0
   let offset = 0
   while (offset + 4 <= data.byteLength) {
     const sig = readU32LE(data, offset)
@@ -69,10 +74,33 @@ async function readZipEntries(data: Uint8Array): Promise<ZipEntry[]> {
     } else {
       throw new Error(`unzip: unsupported compression method: ${String(compressionMethod)}`)
     }
+    inflated += content.byteLength
+    if (inflated > UNZIP_MAX_UNCOMPRESSED_BYTES) throw unzipTooBig()
     entries.push({ name, size: uncompressedSize, data: content })
     offset = headerEnd + compressedSize
   }
   return entries
+}
+
+// Header-only scan: names and declared sizes, nothing inflated. Feeds the
+// size pre-check and the -l listing (see UNZIP_MAX_UNCOMPRESSED_BYTES).
+function readZipHeaders(data: Uint8Array): ZipHeader[] {
+  const headers: ZipHeader[] = []
+  let offset = 0
+  while (offset + 4 <= data.byteLength) {
+    const sig = readU32LE(data, offset)
+    if (sig !== 0x04034b50) break
+    const compressedSize = readU32LE(data, offset + 18)
+    const uncompressedSize = readU32LE(data, offset + 22)
+    const nameLen = readU16LE(data, offset + 26)
+    const extraLen = readU16LE(data, offset + 28)
+    const headerEnd = offset + 30 + nameLen + extraLen
+    const nameBytes = data.subarray(offset + 30, offset + 30 + nameLen)
+    const name = DEC.decode(nameBytes)
+    headers.push({ name, size: uncompressedSize })
+    offset = headerEnd + compressedSize
+  }
+  return headers
 }
 
 function makePathSpec(original: string, prefix: string): PathSpec {
@@ -104,10 +132,17 @@ async function unzipCommand(
   const archivePath = resolved[0]
   if (archivePath === undefined) return [null, new IOResult()]
   const data = await s3Read(accessor, archivePath, opts.index ?? undefined)
-  const entries = await readZipEntries(data)
 
   const listMode = opts.flags.args_l === true
   const testMode = opts.flags.t === true
+  const headers = readZipHeaders(data)
+  if (!listMode) {
+    let totalUncompressed = 0
+    for (const h of headers) totalUncompressed += h.size
+    if (totalUncompressed > UNZIP_MAX_UNCOMPRESSED_BYTES) throw unzipTooBig(archivePath.original)
+  }
+  // Listing needs only the headers, so -l never inflates (and is never refused).
+  const entries = listMode ? headers : await readZipEntries(data)
   const pipeMode = opts.flags.p === true
   const quiet = opts.flags.q === true
   const mountPrefix = archivePath.prefix
@@ -134,9 +169,12 @@ async function unzipCommand(
     return [out, new IOResult()]
   }
 
+  // Not list mode, so entries came from readZipEntries and carry their data.
+  const members = entries as ZipEntry[]
+
   if (pipeMode) {
     const chunks: Uint8Array[] = []
-    for (const e of entries) {
+    for (const e of members) {
       if (!e.name.endsWith('/')) chunks.push(e.data)
     }
     let total = 0
@@ -153,7 +191,7 @@ async function unzipCommand(
 
   const writes: Record<string, Uint8Array> = {}
   const outputLines: string[] = []
-  for (const e of entries) {
+  for (const e of members) {
     if (e.name.endsWith('/')) continue
     const entryName = e.name.replace(/^\/+/, '')
     const outPath = dest.replace(/\/+$/, '') + '/' + entryName

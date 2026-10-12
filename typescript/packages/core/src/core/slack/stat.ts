@@ -45,7 +45,11 @@ function fileNotFound(key: string): Error {
   return e
 }
 
-async function lookupWithFallback(
+/**
+ * Index lookup that self-heals a cold index: on a miss it re-lists the parent
+ * (which populates the index) and looks again. Shared by stat and read.
+ */
+export async function lookupWithFallback(
   accessor: SlackAccessor,
   virtualKey: string,
   prefix: string,

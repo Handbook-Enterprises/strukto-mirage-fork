@@ -245,3 +245,51 @@ describe('workspace: job table cleanup', () => {
     await ws.close()
   })
 })
+
+describe('workspace: redirects after a heredoc, and quoted redirect targets', () => {
+  // tree-sitter nests a redirect written after the heredoc delimiter inside the
+  // heredoc_redirect node; it must still be applied, in shell order.
+  it.each(['EOF', "'EOF'"])('heredoc <<%s followed by > writes the file', async (delim) => {
+    const { ws } = await makeWorkspace()
+    const io = await ws.execute(`cat <<${delim} > /ram/body.txt\nhello\nsecond line\nEOF`)
+    expect(io.exitCode).toBe(0)
+    expect(stdoutStr(io)).toBe('')
+    const out = await ws.execute('cat /ram/body.txt')
+    expect(stdoutStr(out)).toBe('hello\nsecond line\n')
+    await ws.close()
+  })
+
+  it('heredoc followed by >> appends', async () => {
+    const { ws } = await makeWorkspace()
+    await ws.execute('cat <<EOF > /ram/log.txt\nfirst\nEOF')
+    await ws.execute('cat <<EOF >> /ram/log.txt\nsecond\nEOF')
+    const out = await ws.execute('cat /ram/log.txt')
+    expect(stdoutStr(out)).toBe('first\nsecond\n')
+    await ws.close()
+  })
+
+  it('heredoc body text that looks like a redirect is not applied', async () => {
+    const { ws } = await makeWorkspace()
+    const io = await ws.execute("cat <<'EOF' > /ram/body.txt\necho x > /ram/other.txt\nEOF")
+    expect(io.exitCode).toBe(0)
+    expect(stdoutStr(await ws.execute('cat /ram/body.txt'))).toBe('echo x > /ram/other.txt\n')
+    expect((await ws.execute('cat /ram/other.txt')).exitCode).not.toBe(0)
+    await ws.close()
+  })
+
+  // A single-quoted redirect target parses as raw_string.
+  it('single-quoted redirect targets write, append and read', async () => {
+    const { ws } = await makeWorkspace()
+    expect((await ws.execute("printf first > '/ram/my file.txt'")).exitCode).toBe(0)
+    expect((await ws.execute("printf second >> '/ram/my file.txt'")).exitCode).toBe(0)
+    expect(stdoutStr(await ws.execute("cat < '/ram/my file.txt'"))).toBe('firstsecond')
+    await ws.close()
+  })
+
+  it('heredoc with a single-quoted redirect target keeps $ literal', async () => {
+    const { ws } = await makeWorkspace()
+    await ws.execute("cat <<'EOF' > '/ram/body file.txt'\nhello $NAME\nEOF")
+    expect(stdoutStr(await ws.execute("cat '/ram/body file.txt'"))).toBe('hello $NAME\n')
+    await ws.close()
+  })
+})

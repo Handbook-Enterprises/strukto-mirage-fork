@@ -123,43 +123,60 @@ export class WorkspaceFS {
 
   async mkdir(path: string): Promise<void> {
     const [resource, pathSpec] = await this.resolver(path)
+    // Pass the resolved mount's index, as writeFile/readdir/stat do, so an op
+    // keyed by resource kind (e.g. several gdrive mounts) invalidates the
+    // caches of THIS mount rather than another mount of the same kind.
+    const kwargs = resource.index !== undefined ? { index: resource.index } : {}
     await this.ops.call(
       'mkdir',
       resource.kind,
       resource.accessor ?? NOOP_ACCESSOR_INSTANCE,
       pathSpec,
+      [],
+      kwargs,
     )
   }
 
   async unlink(path: string): Promise<void> {
     const [resource, pathSpec] = await this.resolver(path)
+    // Pass the resolved mount's index (see mkdir).
+    const kwargs = resource.index !== undefined ? { index: resource.index } : {}
     await this.ops.call(
       'unlink',
       resource.kind,
       resource.accessor ?? NOOP_ACCESSOR_INSTANCE,
       pathSpec,
+      [],
+      kwargs,
     )
   }
 
   async rmdir(path: string): Promise<void> {
     const [resource, pathSpec] = await this.resolver(path)
+    // Pass the resolved mount's index (see mkdir).
+    const kwargs = resource.index !== undefined ? { index: resource.index } : {}
     await this.ops.call(
       'rmdir',
       resource.kind,
       resource.accessor ?? NOOP_ACCESSOR_INSTANCE,
       pathSpec,
+      [],
+      kwargs,
     )
   }
 
   async rename(src: string, dst: string): Promise<void> {
     const [resource, srcSpec] = await this.resolver(src)
     const [, dstSpec] = await this.resolver(dst)
+    // Pass the resolved mount's index (see mkdir).
+    const kwargs = resource.index !== undefined ? { index: resource.index } : {}
     await this.ops.call(
       'rename',
       resource.kind,
       resource.accessor ?? NOOP_ACCESSOR_INSTANCE,
       srcSpec,
       [dstSpec],
+      kwargs,
     )
   }
 

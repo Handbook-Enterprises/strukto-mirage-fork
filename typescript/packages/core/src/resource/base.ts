@@ -62,6 +62,11 @@ export interface Resource {
   commands?(): readonly RegisteredCommand[]
 
   streamPath?(path: PathSpec): AsyncIterable<Uint8Array>
+  /**
+   * Read at most `length` bytes starting at byte `offset`, without
+   * materializing the whole file. Backs the bridge's `READ_RANGE` op.
+   */
+  readRange?(path: PathSpec, offset: number, length: number): Promise<Uint8Array>
   readFile?(path: PathSpec): Promise<Uint8Array>
   writeFile?(path: PathSpec, data: Uint8Array): Promise<void>
   appendFile?(path: PathSpec, data: Uint8Array): Promise<void>

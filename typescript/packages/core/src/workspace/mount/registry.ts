@@ -371,7 +371,15 @@ export class MountRegistry {
     }
     if (mount === null) return null
     const defaultMount = this.defaultMountRef
-    if (defaultMount !== null && pathScopes.length > 0 && isFileCache(defaultMount.resource)) {
+    // Reroute reads to the file cache only for remote resources. Local stores
+    // (RAM, SQLite-backed disk) are already authoritative and strongly
+    // consistent; rerouting them served stale content after an overwrite.
+    if (
+      defaultMount !== null &&
+      pathScopes.length > 0 &&
+      isFileCache(defaultMount.resource) &&
+      mount.resource.isRemote === true
+    ) {
       const baseCmd = mount.resolveCommand(cmdName)
       if (!baseCmd?.write) {
         if (this.consistency === ConsistencyPolicy.ALWAYS) {

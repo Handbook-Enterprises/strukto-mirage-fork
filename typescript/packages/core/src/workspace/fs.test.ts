@@ -12,10 +12,13 @@
 // limitations under the License.
 // ========= Copyright 2026 @ Strukto.AI All Rights Reserved. =========
 
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { RAMIndexCacheStore } from '../cache/index/ram.ts'
 import { OpsRegistry } from '../ops/registry.ts'
 import { RAMResource } from '../resource/ram/ram.ts'
-import { MountMode } from '../types.ts'
+import type { Resource } from '../resource/base.ts'
+import { MountMode, PathSpec } from '../types.ts'
+import { WorkspaceFS } from './fs.ts'
 import { Workspace } from './workspace.ts'
 
 function mkWorkspace(): Workspace {
@@ -87,5 +90,41 @@ describe('WorkspaceFS', () => {
     const ws = mkWorkspace()
     await ws.fs.writeFile('/data/t.txt', 'content')
     expect(await ws.fs.cat('/data/t.txt')).toBe('content')
+  })
+})
+
+describe('WorkspaceFS mutations pass the mount index', () => {
+  // Ops are keyed by resource kind, so with several mounts of one kind (e.g.
+  // two gdrive mounts) only the index kwarg tells the op which mount's caches
+  // to invalidate. mkdir/unlink/rmdir/rename must pass it like writeFile does.
+  function setup(index: RAMIndexCacheStore | undefined) {
+    const resource = { kind: 'gdrive', index } as unknown as Resource
+    const spec = PathSpec.fromStrPath('/g/x')
+    const call = vi.fn(() => Promise.resolve(undefined))
+    const ops = { call } as unknown as OpsRegistry
+    const fs = new WorkspaceFS(() => Promise.resolve([resource, spec, MountMode.WRITE]), ops)
+    return { fs, call, spec }
+  }
+
+  it.each(['mkdir', 'unlink', 'rmdir'] as const)('%s passes { index }', async (op) => {
+    const index = new RAMIndexCacheStore()
+    const { fs, call, spec } = setup(index)
+    await fs[op]('/g/x')
+    expect(call).toHaveBeenCalledWith(op, 'gdrive', expect.anything(), spec, [], { index })
+  })
+
+  it('rename passes { index } after the destination', async () => {
+    const index = new RAMIndexCacheStore()
+    const { fs, call, spec } = setup(index)
+    await fs.rename('/g/x', '/g/y')
+    expect(call).toHaveBeenCalledWith('rename', 'gdrive', expect.anything(), spec, [spec], {
+      index,
+    })
+  })
+
+  it('passes empty kwargs when the resource has no index', async () => {
+    const { fs, call, spec } = setup(undefined)
+    await fs.mkdir('/g/x')
+    expect(call).toHaveBeenCalledWith('mkdir', 'gdrive', expect.anything(), spec, [], {})
   })
 })

@@ -16,6 +16,7 @@ import type { SlackAccessor } from '../../accessor/slack.ts'
 import type { IndexCacheStore } from '../../cache/index/store.ts'
 import type { PathSpec } from '../../types.ts'
 import { getDayParticipants, getHistoryJsonl } from './history.ts'
+import { lookupWithFallback } from './stat.ts'
 import { getUserProfile, getUsersTsv } from './users.ts'
 
 const encoder = new TextEncoder()
@@ -43,10 +44,14 @@ export async function read(
   const part2 = parts[2] ?? ''
   const part3 = parts[3] ?? ''
 
+  // Lookups go through lookupWithFallback, as stat does: a bare index.get
+  // threw ENOENT on a cold index (e.g. after the isolate restarted) even
+  // though the path exists; the fallback re-lists the parent and retries.
+
   if (parts.length === 4 && (part0 === 'channels' || part0 === 'dms') && part3 === 'chat.jsonl') {
     if (index === undefined) throw fileNotFound(key)
     const parentKey = `${prefix}/${part0}/${part1}`
-    const lookup = await index.get(parentKey)
+    const lookup = await lookupWithFallback(accessor, parentKey, prefix, index)
     if (lookup.entry === undefined || lookup.entry === null) {
       throw fileNotFound(key)
     }
@@ -64,7 +69,7 @@ export async function read(
   ) {
     if (index === undefined) throw fileNotFound(key)
     const parentKey = `${prefix}/${part0}/${part1}`
-    const lookup = await index.get(parentKey)
+    const lookup = await lookupWithFallback(accessor, parentKey, prefix, index)
     if (lookup.entry === undefined || lookup.entry === null) {
       throw fileNotFound(key)
     }
@@ -74,7 +79,7 @@ export async function read(
   if (parts.length === 5 && (part0 === 'channels' || part0 === 'dms') && part3 === 'files') {
     if (index === undefined) throw fileNotFound(key)
     const virtualKey = `${prefix}/${key}`
-    const lookup = await index.get(virtualKey)
+    const lookup = await lookupWithFallback(accessor, virtualKey, prefix, index)
     if (lookup.entry === undefined || lookup.entry === null) {
       throw fileNotFound(key)
     }
@@ -98,7 +103,7 @@ export async function read(
   if (parts.length === 2 && part0 === 'users') {
     if (index === undefined) throw fileNotFound(key)
     const virtualKey = `${prefix}/${key}`
-    const lookup = await index.get(virtualKey)
+    const lookup = await lookupWithFallback(accessor, virtualKey, prefix, index)
     if (lookup.entry === undefined || lookup.entry === null) {
       throw fileNotFound(key)
     }

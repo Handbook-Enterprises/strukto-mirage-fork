@@ -70,6 +70,7 @@ export function getSubshellBody(node: TSNodeLike): TSNodeLike[] {
 }
 
 const TARGET_TYPES: ReadonlySet<string> = new Set([
+  NT.RAW_STRING,
   NT.WORD,
   NT.CONCATENATION,
   NT.SIMPLE_EXPANSION,
@@ -79,7 +80,24 @@ const TARGET_TYPES: ReadonlySet<string> = new Set([
 ])
 
 export function getRedirects(node: TSNodeLike): [TSNodeLike, Redirect[]] {
-  const nc = node.namedChildren
+  // tree-sitter nests any redirect that follows a heredoc delimiter (e.g.
+  // `cat <<EOF > out.txt`) inside that heredoc_redirect node. Flatten only the
+  // redirects, preserving shell order and ignoring heredoc body content.
+  const nc: TSNodeLike[] = []
+  const appendRedirect = (child: TSNodeLike): void => {
+    nc.push(child)
+    if (child.type === NT.HEREDOC_REDIRECT) {
+      for (const nested of child.namedChildren) {
+        if (
+          nested.type === NT.FILE_REDIRECT ||
+          nested.type === NT.HEREDOC_REDIRECT ||
+          nested.type === NT.HERESTRING_REDIRECT
+        )
+          appendRedirect(nested)
+      }
+    }
+  }
+  for (const child of node.namedChildren) appendRedirect(child)
   const command = nc[0]
   if (command === undefined) throw new Error('redirect: missing command')
   const redirects: Redirect[] = []

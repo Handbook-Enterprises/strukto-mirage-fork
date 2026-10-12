@@ -1,7 +1,9 @@
 === ls /data/ ===
 hello world
 revenue,100\nexpense,80
-name=hello.txt size=12 modified=None type=text
+# stat is answered by Redis itself (local mounts are not rerouted to the
+# cache), so modified is Redis's real timestamp and varies per run.
+name=hello.txt size=12 modified=
 "alice"
 └── user.json
 /data/hello.txt

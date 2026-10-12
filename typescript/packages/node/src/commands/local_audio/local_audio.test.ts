@@ -280,15 +280,17 @@ describe('audio stat after cache promotion (cacheMount registration)', () => {
     await ws.close()
   })
 
-  it('regression guard: without cacheMount registration, second stat falls through to built-in', async () => {
+  it('a local mount is not rerouted to the cache: second stat keeps audio metadata without cacheMount registration', async () => {
+    // Only remote resources reroute repeat reads to the cache mount
+    // (MountRegistry). A local disk mount keeps serving its own files, so its
+    // audio stat survives the second call even with nothing on cacheMount.
     const backend = new DiskResource({ root: DATA_DIR })
     const ws = new Workspace({ '/': backend }, { mode: MountMode.READ })
     ws.mount('/')?.registerFns(DISK_LOCAL_AUDIO_COMMANDS)
-    // Intentionally NOT calling ws.cacheMount.registerFns(...)
 
     await ws.execute('stat /example.wav')
     const second = await ws.execute('stat /example.wav')
-    expect(DEC.decode(second.stdout)).not.toContain('Sample rate:')
+    expect(DEC.decode(second.stdout)).toContain('Sample rate:')
     await ws.close()
   })
 })

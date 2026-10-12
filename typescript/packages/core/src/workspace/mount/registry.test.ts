@@ -395,3 +395,57 @@ describe('MountRegistry.mount command registration', () => {
     expect(mount.resolveCommand('multi-read')?.resource).toBe('gsheets')
   })
 })
+
+describe('MountRegistry.resolveMount: file-cache reroute', () => {
+  // A fake file cache that claims every key is cached.
+  class AllCachedFileCache implements Resource {
+    readonly kind = 'ram'
+    open(): Promise<void> {
+      return Promise.resolve()
+    }
+    close(): Promise<void> {
+      return Promise.resolve()
+    }
+    allCached(): Promise<boolean> {
+      return Promise.resolve(true)
+    }
+    get(): Promise<null> {
+      return Promise.resolve(null)
+    }
+    set(): Promise<void> {
+      return Promise.resolve()
+    }
+  }
+
+  class RemoteStubResource extends RAMStubResource {
+    readonly isRemote = true
+  }
+
+  function setup() {
+    const reg = new MountRegistry(
+      { '/local': new RAMStubResource(), '/remote': new RemoteStubResource() },
+      MountMode.READ,
+    )
+    const defaultMount = reg.setDefaultMount(new AllCachedFileCache())
+    for (const prefix of ['/local', '/remote']) {
+      const m = reg.mountForPrefix(prefix)
+      const [cat] = command({ name: 'cat', resource: 'ram', spec: EMPTY_SPEC, fn: NOOP_CMD })
+      if (m === null || cat === undefined) throw new Error('setup failed')
+      m.register(cat)
+    }
+    return { reg, defaultMount }
+  }
+
+  it('serves a cached read of a remote mount from the file cache', async () => {
+    const { reg, defaultMount } = setup()
+    const mount = await reg.resolveMount('cat', [PathSpec.fromStrPath('/remote/a.txt')], '/')
+    expect(mount).toBe(defaultMount)
+  })
+
+  it('keeps a read of a local mount on that mount, even when the key is cached', async () => {
+    // Local stores (RAM, SQLite disk) are authoritative; the cache can be stale.
+    const { reg } = setup()
+    const mount = await reg.resolveMount('cat', [PathSpec.fromStrPath('/local/a.txt')], '/')
+    expect(mount).toBe(reg.mountForPrefix('/local'))
+  })
+})

@@ -137,7 +137,7 @@ export async function handleCommand(
     if (mountPrefixes.size > 1) {
       const prefixesStr = [...mountPrefixes].sort().join(', ')
       const err = new TextEncoder().encode(
-        `${cmdName}: paths span multiple mounts (${prefixesStr}), cross-mount not supported\n`,
+        `${cmdName}: paths span multiple mounts (${prefixesStr}), cross-mount not supported because each mount uses its own credential. Work within one mount, or give the destination mount's identity access to the source so both paths sit on the same mount.\n`,
       )
       return [
         null,
