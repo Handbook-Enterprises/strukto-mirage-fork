@@ -190,7 +190,12 @@ describe('ls on a missing path', () => {
   ): Promise<{ out: string; err: string; exitCode: number }> {
     const cmd = RAM_LS[0]
     if (cmd === undefined) throw new Error('ls not registered')
-    const spec = new PathSpec({ original: `/data${path}`, directory: path, resolved: false, prefix: '/data' })
+    const spec = new PathSpec({
+      original: `/data${path}`,
+      directory: path,
+      resolved: false,
+      prefix: '/data',
+    })
     const result = await cmd.fn(resource.accessor, [spec], [], {
       stdin: null,
       flags,
@@ -201,7 +206,11 @@ describe('ls on a missing path', () => {
     if (result === null) throw new Error('no result')
     const [out, io] = result
     const buf = out instanceof Uint8Array ? out : new Uint8Array()
-    return { out: DEC.decode(buf), err: DEC.decode(await io.materializeStderr()), exitCode: io.exitCode }
+    return {
+      out: DEC.decode(buf),
+      err: DEC.decode(await io.materializeStderr()),
+      exitCode: io.exitCode,
+    }
   }
 
   for (const flags of [{}, { d: true }, { R: true }]) {
