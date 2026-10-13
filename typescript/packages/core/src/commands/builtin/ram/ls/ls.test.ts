@@ -181,3 +181,52 @@ describe('ls', () => {
     expect(overridden).toBe(short)
   })
 })
+
+describe('ls on a missing path', () => {
+  async function runLsErr(
+    resource: RAMResource,
+    path: string,
+    flags: Record<string, string | boolean> = {},
+  ): Promise<{ out: string; err: string; exitCode: number }> {
+    const cmd = RAM_LS[0]
+    if (cmd === undefined) throw new Error('ls not registered')
+    const spec = new PathSpec({
+      original: `/data${path}`,
+      directory: path,
+      resolved: false,
+      prefix: '/data',
+    })
+    const result = await cmd.fn(resource.accessor, [spec], [], {
+      stdin: null,
+      flags,
+      filetypeFns: null,
+      cwd: '/',
+      resource,
+    })
+    if (result === null) throw new Error('no result')
+    const [out, io] = result
+    const buf = out instanceof Uint8Array ? out : new Uint8Array()
+    return {
+      out: DEC.decode(buf),
+      err: DEC.decode(await io.materializeStderr()),
+      exitCode: io.exitCode,
+    }
+  }
+
+  for (const flags of [{}, { d: true }, { R: true }]) {
+    it(`reports the full path as missing (flags ${JSON.stringify(flags)})`, async () => {
+      const resource = new RAMResource()
+      const r = await runLsErr(resource, '/gone.txt', flags)
+      expect(r.err).toBe("ls: cannot access '/data/gone.txt': No such file or directory\n")
+      expect(r.exitCode).toBe(1)
+    })
+  }
+
+  it('ls -R on a file lists the file', async () => {
+    const resource = new RAMResource()
+    seed(resource, [], { '/a.txt': 'x' })
+    const r = await runLsErr(resource, '/a.txt', { R: true })
+    expect(r.out).toBe('a.txt\n')
+    expect(r.exitCode).toBe(0)
+  })
+})

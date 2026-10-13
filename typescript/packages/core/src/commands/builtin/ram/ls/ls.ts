@@ -71,6 +71,8 @@ async function listDir(accessor: RAMAccessor, dir: PathSpec, all: boolean): Prom
   return all ? stats : stats.filter((s) => !s.name.startsWith('.'))
 }
 
+const MISSING = 'No such file or directory'
+
 async function walkRecursive(
   accessor: RAMAccessor,
   dir: PathSpec,
@@ -89,9 +91,12 @@ async function walkRecursive(
   let stats: FileStat[]
   try {
     stats = await listDir(accessor, dir, opts.all)
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    warnings.push(`ls: cannot access '${dir.original}': ${msg}`)
+  } catch {
+    try {
+      appendListing([await ramStat(accessor, dir)], opts.long, opts.human, opts.classify, lines)
+    } catch {
+      warnings.push(`ls: cannot access '${dir.original}': ${MISSING}`)
+    }
     return
   }
   if (header) lines.push(`${dir.stripPrefix}:`)
@@ -140,9 +145,8 @@ async function lsCommand(
     for (const p of targets) {
       try {
         collected.push(await ramStat(accessor, p))
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err)
-        warnings.push(`ls: cannot access '${p.original}': ${msg}`)
+      } catch {
+        warnings.push(`ls: cannot access '${p.original}': ${MISSING}`)
       }
     }
     appendListing(collected, long, human, classify, lines)
@@ -176,12 +180,11 @@ async function lsCommand(
     let stats: FileStat[]
     try {
       stats = await listDir(accessor, p, all)
-    } catch (err) {
+    } catch {
       try {
         stats = [await ramStat(accessor, p)]
       } catch {
-        const msg = err instanceof Error ? err.message : String(err)
-        warnings.push(`ls: cannot access '${p.original}': ${msg}`)
+        warnings.push(`ls: cannot access '${p.original}': ${MISSING}`)
         continue
       }
     }
